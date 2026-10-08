@@ -1,0 +1,95 @@
+===============================================================================
+PLAN DE TRABAJO AUTOMATIZADO Y DINÁMICO (MULTI-USUARIO Y PERFILES VARIABLES)
+===============================================================================
+
+OBJETIVO GENERAL:
+Desarrollar una aplicación web 100% gratuita, accesible con credenciales individuales 
+(para ti y tu hermano) desde cualquier navegador. El sistema debe permitir crear, 
+editar, eliminar o cambiar perfiles dinámicamente, asociando a cada uno sus propias 
+instrucciones de tono/personalidad para renovar automáticamente mensajes, planes de 
+trabajo y feeds. Además, debe integrar un scraper de imágenes (románticas/sensuales) 
+con control anti-duplicados por usuario.
+
+-------------------------------------------------------------------------------
+1. ARQUITECTURA TECNOLÓGICA (STACK GRATUITO)
+-------------------------------------------------------------------------------
+* Frontend (Interfaz Web): React / Next.js o HTML + Tailwind CSS en Vercel.
+* Backend / Automatización: Python (FastAPI / Flask) alojado en Render.com.
+* Base de Datos & Auth: Supabase (PostgreSQL + Autenticación de usuarios gratis).
+* Generación de Texto / IA: Google Gemini API (AI Studio) o Groq Cloud API.
+* Scraping y Medios: Python + Playwright / BeautifulSoup / APIs sin copyright.
+
+-------------------------------------------------------------------------------
+2. ESTRUCTURA DE LA BASE DE DATOS (MULTI-USUARIO Y DINÁMICA)
+-------------------------------------------------------------------------------
+A. Tabla `usuarios`:
+   - id (UUID / PK) -> ID de acceso para ti o tu hermano.
+   - email (VARCHAR)
+   - nombre (VARCHAR)
+
+B. Tabla `perfiles` (DINÁMICOS - Modificables en cualquier momento):
+   - id (UUID / PK)
+   - usuario_id (FK -> usuarios.id) -> A qué cuenta pertenece el perfil.
+   - nombre_perfil (VARCHAR) -> Ej: "Perfil 1", "Perfil 2", etc.
+   - prompt_personalidad (TEXT) -> Instrucciones de tono, estilo y hábitos del perfil.
+   - categoria_feed (VARCHAR) -> Tipo de noticias que prefiere (ej: 'estilo_de_vida', 'tecnologia').
+
+C. Tabla `mensajes_generados`:
+   - id (UUID / PK)
+   - perfil_id (FK -> perfiles.id)
+   - tipo_mensaje (VARCHAR) -> 'saludo', 'icebreaker', 'carta_barrido', 'insistencia'
+   - contenido (TEXT)
+   - fecha_creacion (TIMESTAMP)
+
+D. Tabla `imagenes_descargadas` (CONTROL ANTI-REPETICIÓN):
+   - id (UUID / PK)
+   - usuario_id (FK -> usuarios.id) -> Garantiza que cada hermano tenga su historial.
+   - url_origen (TEXT) -> URL del pin o imagen.
+   - hash_imagen (VARCHAR) -> Identificador único para bloquear duplicados.
+   - fecha_registro (TIMESTAMP)
+
+-------------------------------------------------------------------------------
+3. MÓDULOS DEL SISTEMA Y LÓGICA DE FUNCIONAMIENTO
+-------------------------------------------------------------------------------
+
+[MÓDULO 1: GESTOR DINÁMICO DE PERFILES Y PROMPTS DE IA]
+- Panel donde puedes crear, editar o eliminar perfiles en cualquier momento.
+- Para cada perfil nuevo, defines su "ficha de personalidad" (prompt configurable).
+- Script en Python que toma los perfiles activos de la base de datos y le pide a la
+  IA (Gemini/Groq) que genere variaciones diarias de:
+  * Saludo del día.
+  * Icebreakers y Cartas de Barrido.
+  * Mensajes de Insistencia.
+- Botón de "Renovar Ahora" para regenerar el contenido de cualquier perfil al instante.
+
+[MÓDULO 2: SCRAPER Y FILTRO DE IMÁGENES ANTI-DUPLICADOS]
+- Módulo en Python que extrae imágenes desde tableros de Pinterest o bancos libres.
+- Lógica Anti-Duplicados:
+  * Extrae la URL/Hash de la imagen.
+  * Consulta en Supabase: `WHERE usuario_id = X AND url_origen = Y`.
+  * Si ya existe: La descarta y busca la siguiente.
+  * Si es nueva: La registra en Supabase y la envía a la galería del usuario.
+- Soporte para etiquetas de búsqueda: Románticas, estéticas, *soft NSFW* / sensuales.
+
+[MÓDULO 3: PLAN DE TRABAJO Y NEW FEEDS POR PERFIL]
+- Integración con fuentes RSS gratuitas configurables según el perfil seleccionado.
+- Generador de listas de tareas y enfoques del día personalizados por la IA para cada perfil.
+
+[MÓDULO 4: INTERFAZ WEB Y ACCESO CON CREDENCIALES]
+- Pantalla de Login (Separación de cuentas para ti y tu hermano).
+- Selector desplegable para cambiar entre tus perfiles activos.
+- Botones visuales de "Copiar al portapapeles" en un solo toque para cada mensaje.
+- Galería visual para visualizar y descargar lotes de imágenes nuevas no repetidas.
+
+-------------------------------------------------------------------------------
+4. INSTRUCCIONES DE EJECUCIÓN PASO A PASO PARA LA IA POR CLI
+-------------------------------------------------------------------------------
+Paso 1: Generar el script SQL para Supabase creando el esquema multi-usuario con RLS 
+        (Row Level Security) para aislar los datos de cada hermano.
+Paso 2: Desarrollar la API en Python (FastAPI/Flask) que procese los Prompts dinámicos 
+        de los perfiles y consulte la API gratuita de Gemini/Groq.
+Paso 3: Construir el script en Python para el Scraper de Pinterest / Galería con 
+        el filtro anti-duplicados por `usuario_id`.
+Paso 4: Crear la interfaz Web en React/Tailwind accesible desde cualquier navegador,
+        con CRUD de perfiles, galería de descargas y botones de copia rápida.
+===============================================================================

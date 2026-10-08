@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: system-operator-backend
+    env: docker
+    region: ohio
+    plan: free
+    rootDir: backend
+    dockerfilePath: Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: APP_NAME
+        value: "System Operator API"
+      - key: API_V1_STR
+        value: "/api/v1"
+      - key: SCRAPER_HEADLESS
+        value: "true"
+      # Las siguientes variables deben configurarse en el Dashboard de Render de forma segura:
+      # - SUPABASE_URL
+      # - SUPABASE_KEY
+      # - SUPABASE_SERVICE_KEY
+      # - GEMINI_API_KEY
+      # - GROQ_API_KEY
+      # - SECRET_KEY
+      # - UNSPLASH_ACCESS_KEY

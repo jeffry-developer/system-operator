@@ -1,0 +1,21 @@
+# Dependencias
+node_modules/
+backend/venv/
+backend/__pycache__/
+*.pyc
+
+# Variables de entorno
+.env
+.env.local
+.env.*.local
+frontend/.env
+backend/.env
+
+# Build y Logs
+frontend/dist/
+frontend/build/
+*.log
+
+# SO
+.DS_Store
+Thumbs.db
