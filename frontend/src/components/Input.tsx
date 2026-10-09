@@ -1,7 +1,11 @@
 import { forwardRef, InputHTMLAttributes, LabelHTMLAttributes } from 'react';
 import { cn } from '../utils/helpers';
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  error?: string;
+}
+
+export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, error, ...props }, ref) => {
     return (
       <div className="w-full">
