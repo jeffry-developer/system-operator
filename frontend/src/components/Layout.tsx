@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../utils/helpers';
-import { Menu, X, LogOut, User, Settings, Image, FileText, Layout as LayoutIcon, Heart, Sparkles } from 'lucide-react';
+import { Menu, X, LogOut, User, Settings, Image, FileText, Layout as LayoutIcon, Heart, Sparkles, BookOpen, Hash } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Button } from './Button';
 
@@ -15,6 +15,7 @@ export function Layout() {
     { path: '/plan-trabajo', label: 'Plan de Trabajo', icon: FileText },
     { path: '/new-feed', label: 'New Feed', icon: LayoutIcon },
     { path: '/cartas-dinamicas', label: 'Cartas y Dinámicas', icon: Heart },
+    { path: '/pagadoras-historias', label: 'Pagadoras e Historias', icon: BookOpen },
     { path: '/imagenes', label: 'Imágenes', icon: Image },
   ];
 

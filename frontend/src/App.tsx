@@ -6,6 +6,7 @@ import { PerfilesPage } from './pages/PerfilesPage';
 import { PlanDeTrabajoPage } from './pages/PlanDeTrabajoPage';
 import { NewFeedPage } from './pages/NewFeedPage';
 import { CartasYDinamicasPage } from './pages/CartasYDinamicasPage';
+import { PagadorasYHistoriasPage } from './pages/PagadorasYHistoriasPage';
 import { ImagenesPage } from './pages/ImagenesPage';
 import { ConfiguracionPage } from './pages/ConfiguracionPage';
 import { useAuth } from './context/AuthContext';
@@ -80,6 +81,7 @@ export function App() {
             <Route path="/plan-trabajo" element={<PlanDeTrabajoPage />} />
             <Route path="/new-feed" element={<NewFeedPage />} />
             <Route path="/cartas-dinamicas" element={<CartasYDinamicasPage />} />
+            <Route path="/pagadoras-historias" element={<PagadorasYHistoriasPage />} />
             <Route path="/imagenes" element={<ImagenesPage />} />
             <Route path="/configuracion" element={<ConfiguracionPage />} />
             <Route path="/" element={<Navigate to="/perfiles" replace />} />
