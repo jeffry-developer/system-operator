@@ -8,9 +8,10 @@ interface ModalProps {
   title?: string;
   children: ReactNode;
   className?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
 }
 
-export function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, className, size = 'lg' }: ModalProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -37,7 +38,12 @@ export function Modal({ isOpen, onClose, title, children, className }: ModalProp
         />
         <div
           className={cn(
-            'relative w-full max-w-lg max-h-[90vh] overflow-hidden rounded-xl bg-white shadow-xl transition-all',
+            'relative w-full max-h-[90vh] overflow-hidden rounded-xl bg-white shadow-xl transition-all',
+            size === 'sm' && 'max-w-md',
+            size === 'md' && 'max-w-lg',
+            size === 'lg' && 'max-w-2xl',
+            size === 'xl' && 'max-w-4xl',
+            size === 'full' && 'max-w-[90vw]',
             className
           )}
         >
