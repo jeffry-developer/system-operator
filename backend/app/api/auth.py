@@ -44,14 +44,11 @@ async def register(usuario: UsuarioCreate):
     if existing.data:
         raise HTTPException(status_code=400, detail="El email ya está registrado")
 
-    # Contraseña temporal basada en el email
-    temp_password = usuario.email.split("@")[0] + "Temp123!"
-
-    # Registrar con sign_up (no requiere service key / admin)
+    # Registrar con sign_up usando la contraseña proporcionada por el usuario
     try:
         auth_response = supabase.auth.sign_up({
             "email": usuario.email,
-            "password": temp_password,
+            "password": usuario.password,
             "options": {
                 "data": {"nombre": usuario.nombre}
             }

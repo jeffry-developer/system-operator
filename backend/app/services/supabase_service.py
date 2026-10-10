@@ -2,7 +2,7 @@ from app.core.database import get_supabase, get_supabase_service
 from app.models.schemas import (
     UsuarioCreate, Usuario, PerfilCreate, Perfil, PerfilUpdate,
     MensajeGeneradoCreate, MensajeGenerado, ImagenDescargadaCreate, ImagenDescargada,
-    TipoMensaje
+    TipoMensaje, CartaPagadoraCreate, CartaPagadora, HistoriaGuardadaCreate, HistoriaGuardada
 )
 from uuid import UUID
 from typing import List, Optional, Dict
@@ -120,6 +120,56 @@ class SupabaseService:
     def get_imagenes_count_by_usuario(self, usuario_id: UUID) -> int:
         response = self.client.table("imagenes_descargadas").select("id", count="exact").eq("usuario_id", str(usuario_id)).execute()
         return response.count if response.count else 0
+
+    # =========================================================================
+    # CARTAS PAGADORAS (MARCADORES)
+    # =========================================================================
+    def get_cartas_pagadoras_by_perfil(self, perfil_id: UUID) -> List[Dict]:
+        response = self.client.table("cartas_pagadoras").select("*").eq("perfil_id", str(perfil_id)).order("fecha_actualizacion", desc=True).execute()
+        return response.data or []
+
+    def get_carta_pagadora(self, perfil_id: UUID, nombre_pagadora: str) -> Optional[Dict]:
+        try:
+            response = self.client.table("cartas_pagadoras").select("*").eq("perfil_id", str(perfil_id)).eq("nombre_pagadora", nombre_pagadora).single().execute()
+            return response.data if response.data else None
+        except Exception:
+            return None
+
+    def upsert_carta_pagadora(self, perfil_id: UUID, nombre_pagadora: str, ultima_carta_numero: int, ultima_carta_tipo: str, notas: str = "") -> Optional[Dict]:
+        data = {
+            "perfil_id": str(perfil_id),
+            "nombre_pagadora": nombre_pagadora,
+            "ultima_carta_numero": ultima_carta_numero,
+            "ultima_carta_tipo": ultima_carta_tipo,
+            "notas": notas,
+            "fecha_actualizacion": datetime.utcnow().isoformat()
+        }
+        response = self.client.table("cartas_pagadoras").upsert(data, on_conflict="perfil_id,nombre_pagadora").execute()
+        return response.data[0] if response.data else None
+
+    # =========================================================================
+    # HISTORIAS GUARDADAS
+    # =========================================================================
+    def save_historia(self, historia: HistoriaGuardadaCreate) -> Optional[Dict]:
+        data = historia.model_dump()
+        data["perfil_id"] = str(data["perfil_id"])
+        response = self.client.table("historias_guardadas").insert(data).execute()
+        return response.data[0] if response.data else None
+
+    def get_historias_by_perfil(self, perfil_id: UUID) -> List[Dict]:
+        response = self.client.table("historias_guardadas").select("*").eq("perfil_id", str(perfil_id)).order("fecha_creacion", desc=True).execute()
+        return response.data or []
+
+    def get_historia(self, historia_id: UUID, perfil_id: UUID) -> Optional[Dict]:
+        try:
+            response = self.client.table("historias_guardadas").select("*").eq("id", str(historia_id)).eq("perfil_id", str(perfil_id)).single().execute()
+            return response.data if response.data else None
+        except Exception:
+            return None
+
+    def delete_historia(self, historia_id: UUID, perfil_id: UUID) -> bool:
+        response = self.client.table("historias_guardadas").delete().eq("id", str(historia_id)).eq("perfil_id", str(perfil_id)).execute()
+        return len(response.data) > 0
 
 
 # Usar service role por defecto para bypasear RLS en todas las operaciones del backend

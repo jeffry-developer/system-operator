@@ -37,7 +37,7 @@ B. Tabla `perfiles` (DINÁMICOS - Modificables en cualquier momento):
 C. Tabla `mensajes_generados`:
    - id (UUID / PK)
    - perfil_id (FK -> perfiles.id)
-   - tipo_mensaje (VARCHAR) -> 'saludo', 'icebreaker', 'carta_barrido', 'insistencia'
+   - tipo_mensaje (VARCHAR) -> 'saludo', 'icebreaker', 'carta_barrido', 'insistencia', 'carta_rompehielos', 'respuestas_rapidas', 'posts', 'carta_romantica', 'dinamica_juego'
    - contenido (TEXT)
    - fecha_creacion (TIMESTAMP)
 
@@ -46,10 +46,134 @@ D. Tabla `imagenes_descargadas` (CONTROL ANTI-REPETICIÓN):
    - usuario_id (FK -> usuarios.id) -> Garantiza que cada hermano tenga su historial.
    - url_origen (TEXT) -> URL del pin o imagen.
    - hash_imagen (VARCHAR) -> Identificador único para bloquear duplicados.
+   - etiqueta (VARCHAR) -> Categoría: 'romantica', 'sensual', 'estetica', etc.
    - fecha_registro (TIMESTAMP)
 
+E. Tabla `cartas_pagadoras` (MARCADORES DE PAGADORAS):
+   - id (UUID / PK)
+   - perfil_id (FK -> perfiles.id)
+   - nombre_pagadora (VARCHAR) -> Nombre/identificador de la pagadora
+   - ultima_carta_numero (INTEGER) -> Número de la última carta enviada
+   - ultima_carta_tipo (VARCHAR) -> 'romantica', 'sensual', 'historia', 'personalizada'
+   - notas (TEXT) -> Contexto de en qué parte de la historia va
+   - fecha_actualizacion (TIMESTAMP)
+
+F. Tabla `historias_guardadas` (HISTORIAS OPCIONALES PARA REUTILIZAR):
+   - id (UUID / PK)
+   - perfil_id (FK -> perfiles.id)
+   - titulo (VARCHAR)
+   - tipo (VARCHAR) -> 'romantica', 'sensual', 'sexual', 'personalizada'
+   - contenido (TEXT)
+   - pagadora_asociada (VARCHAR, opcional)
+   - fecha_creacion (TIMESTAMP)
+
 -------------------------------------------------------------------------------
-3. MÓDULOS DEL SISTEMA Y LÓGICA DE FUNCIONAMIENTO
+3. ESTRUCTURA DEL PLAN DE TRABAJO POR PERFIL
+-------------------------------------------------------------------------------
+El Plan de Trabajo se genera como UN SOLO DOCUMENTO con estas secciones en orden:
+
+**-----------------------------(ICEBREAKERS)---------------------------------**
+- EXACTAMENTE 4 icebreakers numerados (1-4)
+- CADA UNO debe comenzar OBLIGATORIAMENTE con un ícono/emoji (ej: 🤝, 🛡️, 🎯, ⚖️)
+- Formato: "1. 🤝 [Texto del icebreaker con pregunta final]"
+- Temáticas coherentes entre sí (misma historia/contexto)
+- Pregunta al final para invitar respuesta
+
+**--------------------------(Carta de Rompehielos)---------------------------**
+- EXACTAMENTE 1 carta (no numerada con múltiples opciones, solo 1)
+- Reflexión profunda/romántica sobre la vida, compañía natural, necesidad de ser amado/cuidado
+- Termina con pregunta tipo "¿opinas lo mismo?" o similar
+- Extensión: 2-3 párrafos
+
+**-----------------------------(Cartas de Barrido)------------------------------**
+- 2 cartas numeradas (1-2)
+- Historias personales cortas de vida diaria (cocinar, cuidarse, rutinas)
+- FUERTEMENTE RELACIONADAS entre sí (mismo contexto/historia)
+- Ejemplo: Carta 1 cocinando para sí mismo → Carta 2 cocinando para pareja
+- Terminan con pregunta personal
+
+**--------------------------(Mensajes de insistencia)-------------------------**
+- 2 mensajes numerados (1-2)
+- Coherentes entre sí, mismo hilo temático
+- Comparten anécdota personal o curiosidad
+- SIN reclamar que no han respondido
+- Terminan con pregunta
+
+**---------------------------------(Saludo)----------------------------------**
+- 1 saludo (formato especial)
+- Cálido, haz saber que has estado pensando en la persona
+- Pregunta abierta sobre su vida
+- Estilo: "Oye me senté un rato... me gustaría saber cómo has estado..."
+
+-------------------------------------------------------------------------------
+4. ESTRUCTURA DEL NEW FEED POR PERFIL
+-------------------------------------------------------------------------------
+El New Feed se genera como UN SOLO DOCUMENTO con estas secciones:
+
+**------------------------(Respuestas Rapidas)---------------------------**
+- 3 respuestas numeradas (1-3)
+- Temas interesantes/fascinantes (historia humanidad, tecnología, evolución)
+- RELACIONADAS LÓGICAMENTE entre sí (misma conversación)
+- Preguntas para enganchar
+
+**------------------------(Mensajes de insistencia)------------------------**
+- 2 mensajes numerados (1-2)
+- Anécdotas curiosidades técnicas/mecánicas (coches, motos, electrodomésticos)
+- Coherentes entre sí
+- Preguntas para continuar conversación
+
+**-------------------------(Saludo)-------------------------------**
+- 1 saludo cálido
+- "Hola cómo estás, tengo rato pensando en ti..."
+- Necesidad de saber de su vida
+
+**--------------------------(Posts)-------------------------------**
+- EXACTAMENTE 3 posts numerados (1-3)
+- Adaptados COMPLETAMENTE a la personalidad del perfil (categoria_feed + prompt_personalidad)
+- Variados y atractivos
+- CADA POST debe incluir: "📸 [Imagen sugerida: descripción de la imagen ideal para este post]"
+
+-------------------------------------------------------------------------------
+5. CARTAS CON MARCADORES DE PAGADORAS
+-------------------------------------------------------------------------------
+- El usuario puede generar cartas especificando: nombre de la pagadora, tipo de carta (romántica, sensual, sexual, historia personalizada), número de cartas
+- El sistema GUARDA el marcador: qué pagadora, qué número de carta, qué tipo, en qué parte de la historia va
+- Al generar nuevas cartas para esa pagadora, CONTINÚA desde donde se quedó
+- Las cartas se guardan en `historias_guardadas` para reutilizar/modificar luego
+- Endpoint: POST /perfiles/{id}/generar-cartas-pagadora con body: {pagadora, tipo, cantidad, instrucciones_opcionales}
+
+-------------------------------------------------------------------------------
+6. HISTORIAS OPCIONALES (GENERACIÓN BAJO DEMANDA)
+-------------------------------------------------------------------------------
+- Usuario pide: "genera una historia romántica", "historia de sexo", "historia sobre X tema"
+- La IA genera la historia completa adaptada al perfil
+- Se guarda automáticamente en `historias_guardadas`
+- Puede asociarse a una pagadora o ser genérica
+- Endpoint: POST /perfiles/{id}/generar-historia con body: {tipo, tema, pagadora_opcional}
+
+-------------------------------------------------------------------------------
+7. MEJORAS AL SCRAPER DE IMÁGENES
+-------------------------------------------------------------------------------
+- Múltiples fuentes: Pinterest, Unsplash, bancos libres (Pixabay, Pexels, etc.)
+- Mejor filtro anti-duplicados: hash perceptual (pHash) + URL
+- Etiquetado automático por contenido (romántica, sensual, estética, lifestyle)
+- Descarga paralela para mayor velocidad
+- Límite configurable por sesión
+- Limpieza automática de URLs rotas
+- Guardar imágenes sugeridas para POSTS del New Feed
+
+-------------------------------------------------------------------------------
+8. DINÁMICAS/JUEGOS - REPARAR
+-------------------------------------------------------------------------------
+- Actualmente no funcionan bien
+- Deben ser: 2-3 dinámicas numeradas, separadas por '---'
+- Personalizadas para UNA pagadora específica
+- Objetivo: enganchar emocionalmente → respuesta activa / regalos / pago por contenido exclusivo
+- Sentirse como juego divertido o reto íntimo
+- Adaptadas al perfil (prompt_personalidad)
+
+-------------------------------------------------------------------------------
+9. MÓDULOS DEL SISTEMA Y LÓGICA DE FUNCIONAMIENTO
 -------------------------------------------------------------------------------
 
 [MÓDULO 1: GESTOR DINÁMICO DE PERFILES Y PROMPTS DE IA]
@@ -57,39 +181,59 @@ D. Tabla `imagenes_descargadas` (CONTROL ANTI-REPETICIÓN):
 - Para cada perfil nuevo, defines su "ficha de personalidad" (prompt configurable).
 - Script en Python que toma los perfiles activos de la base de datos y le pide a la
   IA (Gemini/Groq) que genere variaciones diarias de:
-  * Saludo del día.
-  * Icebreakers y Cartas de Barrido.
-  * Mensajes de Insistencia.
+  * Plan de Trabajo completo (Icebreakers, Carta Rompehielos, Cartas Barrido, Insistencia, Saludo)
+  * New Feed completo (Respuestas Rápidas, Insistencia, Saludo, Posts con imágenes)
+  * Cartas para pagadoras (con marcadores)
+  * Historias opcionales bajo demanda
+  * Dinámicas/juegos
 - Botón de "Renovar Ahora" para regenerar el contenido de cualquier perfil al instante.
 
-[MÓDULO 2: SCRAPER Y FILTRO DE IMÁGENES ANTI-DUPLICADOS]
-- Módulo en Python que extrae imágenes desde tableros de Pinterest o bancos libres.
-- Lógica Anti-Duplicados:
-  * Extrae la URL/Hash de la imagen.
-  * Consulta en Supabase: `WHERE usuario_id = X AND url_origen = Y`.
+[MÓDULO 2: SCRAPER Y FILTRO DE IMÁNES ANTI-DUPLICADOS MEJORADO]
+- Múltiples fuentes: Pinterest, Unsplash, Pixabay, Pexels, bancos libres.
+- Lógica Anti-Duplicados MEJORADA:
+  * Hash perceptual (pHash) para detectar imágenes visualmente iguales
+  * Hash de URL + hash de contenido
+  * Consulta en Supabase: `WHERE usuario_id = X AND hash_imagen = Y`
   * Si ya existe: La descarta y busca la siguiente.
   * Si es nueva: La registra en Supabase y la envía a la galería del usuario.
-- Soporte para etiquetas de búsqueda: Románticas, estéticas, *soft NSFW* / sensuales.
+- Etiquetado automático: 'romantica', 'sensual', 'estetica', 'lifestyle', etc.
+- Descarga paralela (async) para mayor velocidad.
+- Límite configurable por sesión/búsqueda.
+- Genera imágenes sugeridas para cada POST del New Feed.
 
 [MÓDULO 3: PLAN DE TRABAJO Y NEW FEEDS POR PERFIL]
-- Integración con fuentes RSS gratuitas configurables según el perfil seleccionado.
-- Generador de listas de tareas y enfoques del día personalizados por la IA para cada perfil.
+- Generación completa en una sola llamada por perfil.
+- Estructura fija y predecible (ver secciones 3 y 4).
+- Integración con imágenes scrapedas para Posts.
+- Guardado automático en `mensajes_generados` por tipo.
 
-[MÓDULO 4: INTERFAZ WEB Y ACCESO CON CREDENCIALES]
+[MÓDULO 4: CARTAS PARA PAGADORAS Y HISTORIAS]
+- Generación de cartas con continuidad (marcadores por pagadora).
+- Guardado de historias para reutilizar.
+- Asociación opcional pagadora ↔ historia.
+- Endpoint para ver historial de cartas por pagadora.
+
+[MÓDULO 5: INTERFAZ WEB Y ACCESO CON CREDENCIALES]
 - Pantalla de Login (Separación de cuentas para ti y tu hermano).
 - Selector desplegable para cambiar entre tus perfiles activos.
 - Botones visuales de "Copiar al portapapeles" en un solo toque para cada mensaje.
 - Galería visual para visualizar y descargar lotes de imágenes nuevas no repetidas.
+- Vista de Plan de Trabajo y New Feed por perfil.
+- Panel de Pagadoras: ver marcadores, generar cartas continuadas, ver historias guardadas.
+- Generador de historias bajo demanda (tipo, tema, pagadora opcional).
 
 -------------------------------------------------------------------------------
-4. INSTRUCCIONES DE EJECUCIÓN PASO A PASO PARA LA IA POR CLI
+10. INSTRUCCIONES DE EJECUCIÓN PASO A PASO PARA LA IA POR CLI
 -------------------------------------------------------------------------------
 Paso 1: Generar el script SQL para Supabase creando el esquema multi-usuario con RLS 
-        (Row Level Security) para aislar los datos de cada hermano.
+        (Row Level Security) para aislar los datos de cada hermano. INCLUIR tablas nuevas: cartas_pagadoras, historias_guardadas.
 Paso 2: Desarrollar la API en Python (FastAPI/Flask) que procese los Prompts dinámicos 
         de los perfiles y consulte la API gratuita de Gemini/Groq.
-Paso 3: Construir el script en Python para el Scraper de Pinterest / Galería con 
-        el filtro anti-duplicados por `usuario_id`.
+        - Endpoints nuevos: generar-plan-trabajo, generar-new-feed, generar-cartas-pagadora, generar-historia, ver-marcadores-pagadora
+Paso 3: Construir el script en Python para el Scraper MEJORADO de múltiples fuentes 
+        con filtro anti-duplicados por `usuario_id` + hash perceptual.
 Paso 4: Crear la interfaz Web en React/Tailwind accesible desde cualquier navegador,
-        con CRUD de perfiles, galería de descargas y botones de copia rápida.
+        con CRUD de perfiles, galería de descargas, botones de copia rápida, 
+        Plan de Trabajo, New Feed, Panel de Pagadoras, Generador de Historias.
+Paso 5: Testing completo de flujos: registro → crear perfil → generar plan trabajo → generar new feed → scraper imágenes → cartas pagadora → historias.
 ===============================================================================

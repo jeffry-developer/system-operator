@@ -33,44 +33,52 @@ class AIService:
 
     def _construir_system_prompt(self, prompt_personalidad: str) -> str:
         return f"""Eres un asistente especializado en generar mensajes de texto para perfiles de citas/redes sociales.
-        
+
 PERSONALIDAD DEL PERFIL:
 {prompt_personalidad}
 
 REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
-- NUNCA propongas ni hables de encontrarse, verse en persona, salir juntos o citas físicas.
-- PROHIBIDO usar las siguientes palabras o frases: "aveces", "a veces", "sin prisa", "frontera".
-- Sé natural, auténtico y conversacional.
+- NUNCA propongas ni hables de encontrarse, verse en persona, salir juntos, citas fisicas, viajes, desplazamientos o quedadas.
+- PROHIBIDO usar las siguientes palabras o frases: "a veces", "aveces", "sin prisa", "frontera", "verse", "encontrarse", "encontrarnos", "verme", "verte", "viajar", "viaje", "desplazarse", "quedar", "cita", "salir juntos", "en persona", "presencial".
+- REEMPLAZA OBLIGATORIAMENTE "a veces" por "de vez en cuando" en cualquier contexto.
+- NO uses placeholders como [nombre], [Nombre], {{nombre}} o similares. Genera el contenido directo.
+- Se natural, autentico y conversacional.
 - Adapta el tono exactamente a la personalidad descrita.
-- Evita frases genéricas o robóticas.
-- Longitud: 1-3 párrafos según el tipo.
-- Sin emojis excesivos (máximo 1-2 si encajan).
-- En español neutro/latinoamericano.
-- Nunca generes contenido automático sin que el usuario te lo pida."""
+- Evita frases genericas o roboticas.
+- Longitud: 1-3 parrafos segun el tipo.
+- Sin emojis excesivos (maximo 1-2 si encajan).
+- En espanol neutro/latinoamericano.
+- Nunca generes contenido automatico sin que el usuario te lo pida."""
 
     def _construir_prompt_tipo(self, tipo: TipoMensaje, prompt_personalidad: str) -> str:
         prompts = {
-            TipoMensaje.SALUDO: "Genera opciones de saludos iniciales o de re-contacto. Todas las opciones deben estar relacionadas a un mismo contexto o temática para que sean consistentes entre sí. Deben ser cálidos, hacer saber que has estado pensando en la persona y terminar con una pregunta. Numerados.",
+            TipoMensaje.SALUDO: "Genera 4 opciones de saludos iniciales o de re-contacto numeradas (1, 2, 3, 4). CADA OPCION DEBE TENER ESTA ESTRUCTURA EXACTA:\n\n1. [Nombre del perfil] (Descripcion breve de la tematica/perspectiva)\n\n[Texto del saludo: calido, haz saber que has estado pensando en la persona, 2-3 parrafos, termina con una pregunta abierta]\n\n---\n\n2. [Nombre del perfil] (Descripcion breve de la tematica/perspectiva)\n\n[Texto del saludo...]\n\n---\n\nY asi sucesivamente. Todas las opciones deben compartir el mismo contexto tematico (ej. tranquilidad nocturna, bienestar, relax). El nombre del perfil y su descripcion van entre parentesis despues del numero. NO uses placeholders.",
 
-            TipoMensaje.ICEBREAKER: "Genera varias opciones (1-4) de rompehielos (icebreakers). CADA OPCIÓN DEBE COMENZAR OBLIGATORIAMENTE CON UN ÍCONO/EMOJI al principio. Pueden ser pensamientos reflexivos o preguntar sobre hábitos. Las opciones deben relacionarse temáticamente entre sí. Numerados.",
+            TipoMensaje.ICEBREAKER: "Genera EXACTAMENTE 4 icebreakers numerados (1-4) para el PLAN DE TRABAJO. CADA UNO DEBE COMENZAR OBLIGATORIAMENTE CON UN ICONO/EMOJI DIFERENTE al principio (ej: 🤝, 🛡️, 🎯, ⚖️). Formato: '1. 🤝 [Texto reflexivo o sobre habitos con pregunta final]'. Las 4 opciones deben relacionarse tematicamente entre si (misma historia/contexto). No uses placeholders.",
 
-            TipoMensaje.CARTA_ROMPEHIELOS: "Genera una 'Carta de Rompehielos'. Es un solo mensaje, un poco más largo, con una reflexión profunda o romántica sobre la vida (ej. la necesidad de compañía natural) y termina con una pregunta tipo '¿opinas lo mismo?'.",
+            TipoMensaje.CARTA_ROMPEHIELOS: "Genera UNA SOLA 'Carta de Rompehielos' para el PLAN DE TRABAJO. Reflexion profunda/romantica sobre la vida: la necesidad de compania natural, sentirnos amados, tener a alguien que nos cuide. Extension: 2-3 parrafos. Termina OBLIGATORIAMENTE con pregunta tipo '¿opinas lo mismo?' o similar. No uses placeholders.",
 
-            TipoMensaje.CARTA_BARRIDO: "Genera opciones (1-2) de 'Cartas de Barrido'. Son historias personales cortas de tu vida diaria (ej. cocinar, cuidar de ti). Las opciones que generes deben estar fuertemente relacionadas entre sí, compartiendo el mismo contexto o historia. Numeradas.",
+            TipoMensaje.CARTA_BARRIDO: "Genera 2 'Cartas de Barrido' numeradas (1-2) para el PLAN DE TRABAJO. Son historias personales cortas de tu vida diaria (ej: cocinar, cuidar de ti, rutinas). LAS DOS DEBEN ESTAR FUERTEMENTE RELACIONADAS entre si, compartiendo el mismo contexto o historia continua. Ejemplo: Carta 1 cocinando para ti -> Carta 2 cocinando para pareja. Terminan con pregunta personal. No uses placeholders.",
 
-            TipoMensaje.INSISTENCIA: "Genera opciones (1-2) de mensajes de insistencia. Las opciones deben ser coherentes entre sí y seguir un mismo hilo temático. Deben compartir una pequeña anécdota personal o curiosidad. Sin reclamar que no han respondido. Numeradas.",
+            TipoMensaje.INSISTENCIA: "Genera 2 mensajes de insistencia numerados (1-2) para el PLAN DE TRABAJO. Coherentes entre si, mismo hilo tematico. Comparten una anecdota personal o curiosidad (ej: visita de hijos, familia). SIN reclamar que no han respondido. Terminan con pregunta. No uses placeholders.",
 
-            TipoMensaje.RESPUESTAS_RAPIDAS: "Genera opciones (1-3) de respuestas rápidas sobre temas interesantes o fascinantes. ESTRICTO: Las respuestas deben estar relacionadas lógicamente entre sí como si fueran parte de una misma conversación. Numeradas.",
+            TipoMensaje.RESPUESTAS_RAPIDAS: "Genera 3 respuestas rapidas numeradas (1-3) para el NEW FEED. Temas interesantes/fascinantes (historia humanidad, tecnologia, evolucion, ciencia). ESTRICTO: Las 3 respuestas deben estar RELACIONADAS LOGICAMENTE entre si como si fueran parte de una misma conversacion continua. Cada una con pregunta para enganchar. No uses placeholders.",
 
-            TipoMensaje.POSTS: "Genera 3 ideas de posts o nuevas publicaciones (New Feed) para redes sociales, adaptadas completamente a la personalidad del perfil. Deben ser variadas, atractivas y estar numeradas.",
+            TipoMensaje.POSTS: "Genera EXACTAMENTE 3 posts numerados (1-3) para el NEW FEED. Adaptados COMPLETAMENTE a la personalidad del perfil (categoria_feed + prompt_personalidad). Variados y atractivos. CADA POST DEBE INCLUIR AL FINAL: '📸 [Imagen sugerida: descripcion detallada de la imagen ideal para este post]'. No uses placeholders.",
 
-            TipoMensaje.CARTA_ROMANTICA: """Genera una serie de MÍNIMO 6 cartas románticas o sensuales cortas (de exactamente 2 párrafos cada una), numeradas del 1 al 6+. Cada carta debe ser diferente en tema y tono: algunas más románticas y tiernas, otras más sensuales e insinuantes (sin ser explícitas). Deben generar deseo, intriga y ganas de responder. Formato: cada carta separada por '---'. Ejemplo de estructura:
-1. [carta romántica, 2 párrafos]
+            TipoMensaje.CARTA_ROMANTICA: """Genera una serie de MINIMO 6 cartas romanticcas o sensuales cortas (de exactamente 2 parrafos cada una), numeradas del 1 al 6+. Cada carta debe ser diferente en tema y tono: algunas mas romanticcas y tiernas, otras mas sensuales e insinuantes (sin ser explicitas). Deben generar deseo, intriga y ganas de responder. Formato: cada carta separada por '---'. Ejemplo de estructura:
+1. [carta romantica, 2 parrafos]
 ---
-2. [carta sensual, 2 párrafos]
----... y así hasta al menos 6.""",
+2. [carta sensual, 2 parrafos]
+---... y asi hasta al menos 6.""",
 
-            TipoMensaje.DINAMICA_JUEGO: """Genera 2-3 ideas de 'Dinámicas o Juegos' personalizados para enviarle a UNA CLIENTA ESPECÍFICA (pagadora) con el objetivo de engancharla emocionalmente y motivarla a: (1) responder activamente, (2) enviarte regalos o propinas, o (3) pagar por posts privados de imágenes o contenido exclusivo. Cada dinámica debe sentirse como un juego divertido o un reto íntimo entre los dos. Numeradas y separadas por '---'."""
+            TipoMensaje.DINAMICA_JUEGO: """Genera 2-3 ideas de 'Dinamicas o Juegos' personalizados para enviarle a UNA CLIENTA ESPECIFICA (pagadora) con el objetivo de engancharla emocionalmente y motivarla a: (1) responder activamente, (2) enviarte regalos o propinas, o (3) pagar por posts privados de imagenes o contenido exclusivo. Cada dinamica debe sentirse como un juego divertido o un reto intimo entre los dos. Numeradas y separadas por '---'. Adaptadas al perfil.""",
+
+            TipoMensaje.SALUDO_PLAN_TRABAJO: "Genera 1 saludo para el PLAN DE TRABAJO (seccion final). Estilo: 'Oye me sente un rato en el sofa a ver una pelicula y empece a pensar en ti... me gustaria saber como has estado, la verdad es que me has hecho muchisima falta y sobre todo me hace falta saber de ti, cuentame que ha sido de tu vida, algo interesante que te haya pasado que me quieras contar'. Calido, directo, pregunta abierta. No uses placeholders.",
+
+            TipoMensaje.SALUDO_NEW_FEED: "Genera 1 saludo para el NEW FEED (seccion final). Estilo: 'Hola como estas, tengo rato pensando en ti la verdad, ultimamente tengo la necesidad de saber mucho acerca de tu vida'. Calido, necesidad genuina de saber de la persona. No uses placeholders.",
+
+            TipoMensaje.INSISTENCIA_NEW_FEED: "Genera 2 mensajes de insistencia numerados (1-2) para el NEW FEED. Anecdotas/curiosidades tecnicas o mecanicas (coches, motos, electrodomesticos, como funcionan las cosas por dentro). Coherentes entre si, mismo hilo tematico. Preguntas como '¿No te ha pasado que te llama la atencion como funciona X por dentro?'. No uses placeholders.",
         }
         return prompts.get(tipo, "Genera un mensaje apropiado y adaptado a las reglas estipuladas.")
 

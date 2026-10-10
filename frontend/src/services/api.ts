@@ -70,8 +70,8 @@ class ApiService {
   }
 
   // Auth
-  async register(email: string, nombre: string) {
-    const response = await this.client.post('/auth/register', { email, nombre });
+  async register(email: string, nombre: string, password: string) {
+    const response = await this.client.post('/auth/register', { email, nombre, password });
     this.setTokens(response.data);
     return response.data;
   }
@@ -134,6 +134,44 @@ class ApiService {
 
   async generarSaludosRapidos() {
     const response = await this.client.post('/perfiles/generar-saludos-rapidos');
+    return response.data;
+  }
+
+  // Plan de Trabajo & New Feed
+  async generarPlanTrabajo(perfilId: string) {
+    const response = await this.client.post(`/perfiles/${perfilId}/generar-plan-trabajo`);
+    return response.data;
+  }
+
+  async generarNewFeed(perfilId: string) {
+    const response = await this.client.post(`/perfiles/${perfilId}/generar-new-feed`);
+    return response.data;
+  }
+
+  // Cartas Pagadoras
+  async generarCartasPagadora(perfilId: string, data: { pagadora: string; tipo: string; cantidad: number; instrucciones?: string }) {
+    const response = await this.client.post(`/perfiles/${perfilId}/generar-cartas-pagadora`, data);
+    return response.data;
+  }
+
+  async getPagadoras(perfilId: string) {
+    const response = await this.client.get(`/perfiles/${perfilId}/pagadoras`);
+    return response.data;
+  }
+
+  // Historias
+  async generarHistoria(perfilId: string, data: { tipo: string; tema: string; pagadora?: string }) {
+    const response = await this.client.post(`/perfiles/${perfilId}/generar-historia`, data);
+    return response.data;
+  }
+
+  async getHistorias(perfilId: string) {
+    const response = await this.client.get(`/perfiles/${perfilId}/historias`);
+    return response.data;
+  }
+
+  async deleteHistoria(perfilId: string, historiaId: string) {
+    const response = await this.client.delete(`/perfiles/${perfilId}/historias/${historiaId}`);
     return response.data;
   }
 

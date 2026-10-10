@@ -10,8 +10,8 @@ import { cn, copyToClipboard } from '../utils/helpers';
 
 const DEFAULT_SALUDOS = [
   {
-    nombre: "Perfil Extra (Cuido)",
-    texto: "¡Hola! Me daba una vuelta por aquí para saludarte en este rato de tranquilidad y asegurarme de que estés bien arropado. A estas horas, cuando el cuerpo ya pide calma, sienta de maravilla hacer un paréntesis, dejar los pendientes de lado y charlar de cosas más ligeras.\n\nOjalá estés encontrando un espacio cómodo para ti. Si sigues despierto y te apetece charlar un momento, cuéntame: ¿cómo te puedo consentir o qué necesitas para estar más a gusto en este ratito?"
+    nombre: "Cuido (Bienestar protector y mimo)",
+    texto: "1. Cuido (Bienestar protector y mimo)\n\n¡Hola! Me daba una vuelta por aquí para saludarte en este rato de tranquilidad y asegurarme de que estés bien arropado. A estas horas, cuando el cuerpo ya pide calma, sienta de maravilla hacer un paréntesis, dejar los pendientes de lado y charlar de cosas más ligeras.\n\nOjalá estés encontrando un espacio cómodo para ti. Si sigues despierto y te apetece charlar un momento, cuéntame: ¿cómo te puedo consentir o qué necesitas para estar más a gusto en este ratito?"
   }
 ];
 
@@ -24,8 +24,8 @@ export function PerfilesPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [renovandoSaludos, setRenovandoSaludos] = useState(false);
   const [saludosGenerales, setSaludosGenerales] = useState<{nombre: string, texto: string}[]>(() => {
-    const cached = localStorage.getItem('saludos_generales');
-    return cached ? JSON.parse(cached) : DEFAULT_SALUDOS;
+    // No cargar de localStorage para evitar datos de otros usuarios
+    return DEFAULT_SALUDOS;
   });
   const [formData, setFormData] = useState({
     nombre_perfil: '',
@@ -113,7 +113,6 @@ export function PerfilesPage() {
     try {
       const resultados = await api.generarSaludosRapidos();
       setSaludosGenerales(resultados);
-      localStorage.setItem('saludos_generales', JSON.stringify(resultados));
       success('Saludos generales renovados para todos los perfiles');
     } catch (err) {
       showError('Error al renovar los saludos generales');

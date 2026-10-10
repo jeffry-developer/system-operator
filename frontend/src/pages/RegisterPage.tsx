@@ -35,7 +35,7 @@ export function RegisterPage() {
 
     setLoading(true);
     try {
-      await register(email, nombre);
+      await register(email, nombre, password);
       navigate('/perfiles');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Error al registrarse';

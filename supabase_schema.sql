@@ -55,12 +55,41 @@ CREATE TABLE imagenes_descargadas (
 );
 
 -- ============================================================================
+-- TABLA: cartas_pagadoras (MARCADORES DE PAGADORAS)
+-- ============================================================================
+CREATE TABLE cartas_pagadoras (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    perfil_id UUID REFERENCES perfiles(id) ON DELETE CASCADE NOT NULL,
+    nombre_pagadora VARCHAR(100) NOT NULL,
+    ultima_carta_numero INTEGER DEFAULT 0,
+    ultima_carta_tipo VARCHAR(50) DEFAULT 'romantica',
+    notas TEXT DEFAULT '',
+    fecha_actualizacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE(perfil_id, nombre_pagadora)
+);
+
+-- ============================================================================
+-- TABLA: historias_guardadas (HISTORIAS OPCIONALES PARA REUTILIZAR)
+-- ============================================================================
+CREATE TABLE historias_guardadas (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    perfil_id UUID REFERENCES perfiles(id) ON DELETE CASCADE NOT NULL,
+    titulo VARCHAR(200) NOT NULL,
+    tipo VARCHAR(50) NOT NULL, -- romantica, sensual, sexual, personalizada
+    contenido TEXT NOT NULL,
+    pagadora_asociada VARCHAR(100),
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================================================
 -- ÍNDICES PARA PERFORMANCE
 -- ============================================================================
 CREATE INDEX idx_perfiles_usuario_id ON perfiles(usuario_id);
 CREATE INDEX idx_mensajes_perfil_id ON mensajes_generados(perfil_id);
 CREATE INDEX idx_imagenes_usuario_id ON imagenes_descargadas(usuario_id);
 CREATE INDEX idx_imagenes_hash ON imagenes_descargadas(hash_imagen);
+CREATE INDEX idx_cartas_pagadoras_perfil_id ON cartas_pagadoras(perfil_id);
+CREATE INDEX idx_historias_perfil_id ON historias_guardadas(perfil_id);
 
 -- ============================================================================
 -- ROW LEVEL SECURITY (RLS) - AISLAMIENTO DE DATOS POR USUARIO
@@ -71,6 +100,8 @@ ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE perfiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mensajes_generados ENABLE ROW LEVEL SECURITY;
 ALTER TABLE imagenes_descargadas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE cartas_pagadoras ENABLE ROW LEVEL SECURITY;
+ALTER TABLE historias_guardadas ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
 -- POLÍTICAS RLS: usuarios
@@ -131,6 +162,80 @@ CREATE POLICY "imagenes_insert_own" ON imagenes_descargadas
     FOR INSERT WITH CHECK (auth.uid() = usuario_id);
 
 -- ============================================================================
+-- POLÍTICAS RLS: cartas_pagadoras
+-- ============================================================================
+-- Usuario ve solo sus marcadores de pagadoras
+CREATE POLICY "cartas_pagadoras_select_own" ON cartas_pagadoras
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM perfiles p 
+            WHERE p.id = cartas_pagadoras.perfil_id 
+            AND p.usuario_id = auth.uid()
+        )
+    );
+
+-- Usuario inserta/actualiza sus propios marcadores
+CREATE POLICY "cartas_pagadoras_insert_own" ON cartas_pagadoras
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM perfiles p 
+            WHERE p.id = cartas_pagadoras.perfil_id 
+            AND p.usuario_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "cartas_pagadoras_update_own" ON cartas_pagadoras
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM perfiles p 
+            WHERE p.id = cartas_pagadoras.perfil_id 
+            AND p.usuario_id = auth.uid()
+        )
+    );
+
+-- ============================================================================
+-- POLÍTICAS RLS: historias_guardadas
+-- ============================================================================
+-- Usuario ve solo sus historias guardadas
+CREATE POLICY "historias_select_own" ON historias_guardadas
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM perfiles p 
+            WHERE p.id = historias_guardadas.perfil_id 
+            AND p.usuario_id = auth.uid()
+        )
+    );
+
+-- Usuario inserta sus propias historias
+CREATE POLICY "historias_insert_own" ON historias_guardadas
+    FOR INSERT WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM perfiles p 
+            WHERE p.id = historias_guardadas.perfil_id 
+            AND p.usuario_id = auth.uid()
+        )
+    );
+
+-- Usuario actualiza/elimina sus propias historias
+CREATE POLICY "historias_update_own" ON historias_guardadas
+    FOR UPDATE USING (
+        EXISTS (
+            SELECT 1 FROM perfiles p 
+            WHERE p.id = historias_guardadas.perfil_id 
+            AND p.usuario_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "historias_delete_own" ON historias_guardadas
+    FOR DELETE USING (
+        EXISTS (
+            SELECT 1 FROM perfiles p 
+            WHERE p.id = historias_guardadas.perfil_id 
+            AND p.usuario_id = auth.uid()
+        )
+    );
+
+-- ============================================================================
 -- FUNCIONES AUXILIARES
 -- ============================================================================
 
@@ -148,6 +253,9 @@ CREATE TRIGGER update_usuarios_updated_at BEFORE UPDATE ON usuarios
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_perfiles_updated_at BEFORE UPDATE ON perfiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_cartas_pagadoras_fecha BEFORE UPDATE ON cartas_pagadoras
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- ============================================================================

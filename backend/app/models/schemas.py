@@ -15,6 +15,9 @@ class TipoMensaje(str, enum.Enum):
     POSTS = "posts"
     CARTA_ROMANTICA = "carta_romantica"
     DINAMICA_JUEGO = "dinamica_juego"
+    SALUDO_PLAN_TRABAJO = "saludo_plan_trabajo"
+    SALUDO_NEW_FEED = "saludo_new_feed"
+    INSISTENCIA_NEW_FEED = "insistencia_new_feed"
 
 
 class UsuarioBase(BaseModel):
@@ -23,7 +26,7 @@ class UsuarioBase(BaseModel):
 
 
 class UsuarioCreate(UsuarioBase):
-    pass
+    password: str
 
 
 class Usuario(UsuarioBase):
@@ -98,6 +101,59 @@ class ImagenDescargada(ImagenDescargadaBase):
 
     class Config:
         from_attributes = True
+
+
+class CartaPagadoraBase(BaseModel):
+    nombre_pagadora: str
+    ultima_carta_numero: int = 0
+    ultima_carta_tipo: str = "romantica"
+    notas: str = ""
+
+
+class CartaPagadoraCreate(CartaPagadoraBase):
+    perfil_id: UUID
+
+
+class CartaPagadora(CartaPagadoraBase):
+    id: UUID
+    perfil_id: UUID
+    fecha_actualizacion: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class HistoriaGuardadaBase(BaseModel):
+    titulo: str
+    tipo: str  # romantica, sensual, sexual, personalizada
+    contenido: str
+    pagadora_asociada: Optional[str] = None
+
+
+class HistoriaGuardadaCreate(HistoriaGuardadaBase):
+    perfil_id: UUID
+
+
+class HistoriaGuardada(HistoriaGuardadaBase):
+    id: UUID
+    perfil_id: UUID
+    fecha_creacion: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class CartasPagadoraRequest(BaseModel):
+    pagadora: str
+    tipo: str = "romantica"  # romantica, sensual, sexual, personalizada, historia
+    cantidad: int = 3
+    instrucciones: Optional[str] = None
+
+
+class HistoriaRequest(BaseModel):
+    tipo: str  # romantica, sensual, sexual, personalizada
+    tema: str
+    pagadora: Optional[str] = None
 
 
 class Token(BaseModel):
