@@ -429,3 +429,26 @@ async def delete_historia(perfil_id: UUID, historia_id: UUID, current_user: UUID
     if not success:
         raise HTTPException(status_code=404, detail="Historia no encontrada")
     return {"message": "Historia eliminada"}
+
+
+@router.post("/{perfil_id}/historias")
+async def save_historia(perfil_id: UUID, request: dict, current_user: UUID = Depends(get_current_user)):
+    """Guarda o actualiza una historia personalizada"""
+    perfil = supabase_service.get_perfil(perfil_id, current_user)
+    if not perfil:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+    
+    try:
+        historia_data = HistoriaGuardadaCreate(
+            perfil_id=perfil_id,
+            titulo=request.get("titulo", "Sin título"),
+            tipo=request.get("tipo", "personalizada"),
+            contenido=request.get("contenido", ""),
+            pagadora_asociada=request.get("pagadora_asociada")
+        )
+        resultado = supabase_service.save_historia(historia_data)
+        if not resultado:
+            raise HTTPException(status_code=500, detail="Error al guardar historia")
+        return resultado
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al guardar historia: {str(e)}")

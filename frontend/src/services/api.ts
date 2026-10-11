@@ -175,6 +175,11 @@ class ApiService {
     return response.data;
   }
 
+  async saveHistoria(data: { perfil_id: string; titulo: string; tipo: string; contenido: string; pagadora_asociada?: string }) {
+    const response = await this.client.post(`/perfiles/${data.perfil_id}/historias`, data);
+    return response.data;
+  }
+
   // Imágenes
   async getImagenes(limit = 50) {
     const response = await this.client.get('/imagenes', { params: { limit } });
