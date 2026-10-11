@@ -147,17 +147,38 @@ export function PagadorasYHistoriasPage() {
     } catch { showError('Error al eliminar'); }
   };
 
-  // ===== EDITOR DE HISTORIAS CON MARCADORES VISUALES =====
+  // ===== FLUJO: NUEVA HISTORIA CON IA =====
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [aiGeneratedContent, setAiGeneratedContent] = useState<string | null>(null);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
+
   const openNewHistoria = () => {
     setEditingHistoria(null);
-    setEditorContent('');
     setEditorTitulo('');
     setEditorTipo('romantica');
     setEditorPagadoraAsociada('');
-    setMarcadores([]);
-    setNextMarcadorId(1);
-    setShowEditor(true);
-    setActiveTab('editor');
+    setShowAIGenerator(true);
+  };
+
+  const handleAIGenerate = async () => {
+    if (!editorTitulo.trim()) { showError('Pon un título/tema'); return; }
+    setGeneratingAI(true);
+    try {
+      const res = await api.generarHistoria(selectedPerfilId, {
+        tipo: editorTipo,
+        tema: editorTitulo,
+        pagadora: editorPagadoraAsociada || undefined
+      });
+      setAiGeneratedContent(res.contenido);
+      setShowAIGenerator(false);
+      // Abrir editor con contenido generado
+      setEditorContent(res.contenido);
+      setMarcadores([]);
+      setNextMarcadorId(1);
+      setShowEditor(true);
+      setActiveTab('editor');
+    } catch (e: any) { showError(e.response?.data?.detail || 'Error al generar con IA'); }
+    finally { setGeneratingAI(false); }
   };
 
   const openEditHistoria = (h: HistoriaGuardada) => {
@@ -166,7 +187,6 @@ export function PagadorasYHistoriasPage() {
     setEditorTitulo(h.titulo);
     setEditorTipo(h.tipo as any);
     setEditorPagadoraAsociada(h.pagadora_asociada || '');
-    // Reconstruir marcadores desde notas guardadas o empezar limpio
     setMarcadores([]);
     setNextMarcadorId(1);
     setShowEditor(true);
@@ -603,6 +623,50 @@ export function PagadorasYHistoriasPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* Modal Generador IA para Nueva Historia */}
+      <Modal isOpen={showAIGenerator} onClose={() => setShowAIGenerator(false)} title="Generar Historia con IA" size="lg">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">La IA genera la historia completa. Luego podrás editarla y agregar marcadores de pagadoras visualmente.</p>
+          
+          <div>
+            <Label>Tipo de historia</Label>
+            <select value={editorTipo} onChange={(e) => setEditorTipo(e.target as any)} className="input">
+              {TIPO_HISTORIA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} - {o.desc}</option>)}
+            </select>
+          </div>
+          
+          <div>
+            <Label htmlFor="ai_tema">Título / Tema *</Label>
+            <Input id="ai_tema" value={editorTitulo} onChange={(e) => setEditorTitulo(e.target.value)} placeholder="Ej: Reencuentro en París después de años / Noche de pasión en hotel / Fantasía específica..." required autoFocus />
+          </div>
+          
+          <div>
+            <Label htmlFor="ai_pagadora">Asociar a pagadora (opcional)</Label>
+            <select id="ai_pagadora" value={editorPagadoraAsociada} onChange={(e) => setEditorPagadoraAsociada(e.target.value)} className="input">
+              <option value="">-- Sin pagadora (historia genérica) --</option>
+              {pagadoras.map((p: string) => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-gray-100">
+            <Button variant="secondary" onClick={() => setShowAIGenerator(false)} className="flex-1">Cancelar</Button>
+            <Button onClick={handleAIGenerate} disabled={generatingAI || !editorTitulo.trim()} className="flex-1 bg-purple-600 hover:bg-purple-700">
+              {generatingAI ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  Generando con IA...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generar con IA
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
       </Modal>
     </div>
   );
