@@ -248,7 +248,16 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
--- Triggers para updated_at
+-- Función para actualizar fecha_actualizacion automáticamente
+CREATE OR REPLACE FUNCTION update_fecha_actualizacion_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.fecha_actualizacion = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Triggers para updated_at y fecha_actualizacion
 CREATE TRIGGER update_usuarios_updated_at BEFORE UPDATE ON usuarios
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -256,7 +265,8 @@ CREATE TRIGGER update_perfiles_updated_at BEFORE UPDATE ON perfiles
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_cartas_pagadoras_fecha BEFORE UPDATE ON cartas_pagadoras
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+    FOR EACH ROW EXECUTE FUNCTION update_fecha_actualizacion_column();
+
 
 -- ============================================================================
 -- FUNCIÓN RPC: Verificar duplicado de imagen (para uso en API)

@@ -108,20 +108,17 @@ CREATE POLICY "historias_delete_own" ON historias_guardadas
     );
 
 -- ============================================================================
--- TRIGGER PARA updated_at EN cartas_pagadoras
--- (usa la función update_updated_at_column() que ya debería existir)
+-- TRIGGER PARA fecha_actualizacion EN cartas_pagadoras
 -- ============================================================================
-CREATE TRIGGER update_cartas_pagadoras_fecha BEFORE UPDATE ON cartas_pagadoras
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE OR REPLACE FUNCTION update_fecha_actualizacion_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.fecha_actualizacion = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE 'plpgsql';
 
--- ============================================================================
--- VERIFICACIÓN: La función update_updated_at_column() debe existir.
--- Si NO existe (error al crear trigger), descomenta y ejecuta lo siguiente:
--- ============================================================================
--- CREATE OR REPLACE FUNCTION update_updated_at_column()
--- RETURNS TRIGGER AS $$
--- BEGIN
---     NEW.updated_at = NOW();
---     RETURN NEW;
--- END;
--- $$ language 'plpgsql';
+DROP TRIGGER IF EXISTS update_cartas_pagadoras_fecha ON cartas_pagadoras;
+
+CREATE TRIGGER update_cartas_pagadoras_fecha BEFORE UPDATE ON cartas_pagadoras
+    FOR EACH ROW EXECUTE FUNCTION update_fecha_actualizacion_column();

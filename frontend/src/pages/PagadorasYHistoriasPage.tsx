@@ -55,6 +55,8 @@ export function PagadorasYHistoriasPage() {
   const [showSaveCartaModal, setShowSaveCartaModal] = useState(false);
   const [saveCartaTitulo, setSaveCartaTitulo] = useState("");
   const [saveCartaPagadora, setSaveCartaPagadora] = useState("");
+  const [currentCartaGenId, setCurrentCartaGenId] = useState<string>("");
+  const [estudioDocId, setEstudioDocId] = useState<string>("default");
 
   // === PAGADORAS ===
   const [pagadoras, setPagadoras] = useState<string[]>([]);
@@ -108,10 +110,23 @@ export function PagadorasYHistoriasPage() {
 
     const storedHistorial = localStorage.getItem("cartas_gen_historial_" + selectedPerfilId);
     if (storedHistorial) setCartasGeneradasHistorial(JSON.parse(storedHistorial));
-
-    const storedPos = localStorage.getItem("posiciones_pagadoras_" + selectedPerfilId);
-    if (storedPos) setPosicionesPagadoras(JSON.parse(storedPos));
   }, [selectedPerfilId]);
+
+  // Cargar marcadores específicos para el documento actual (carta o historia)
+  useEffect(() => {
+    if (!selectedPerfilId) return;
+    const key = `posiciones_pagadoras_${selectedPerfilId}_${estudioDocId}`;
+    const storedPos = localStorage.getItem(key);
+    if (storedPos) {
+      try {
+        setPosicionesPagadoras(JSON.parse(storedPos));
+      } catch {
+        setPosicionesPagadoras({});
+      }
+    } else {
+      setPosicionesPagadoras({});
+    }
+  }, [selectedPerfilId, estudioDocId]);
 
   const loadPagadoras = async () => {
     try {
@@ -128,6 +143,7 @@ export function PagadorasYHistoriasPage() {
       if (data.length > 0 && !editorContent) {
         // Cargar primera historia por defecto en el estudio si no hay contenido
         setEditingHistoria(data[0]);
+        setEstudioDocId("historia_" + data[0].id);
         setEditorTitulo(data[0].titulo);
         setEditorContent(data[0].contenido);
         setEditorTipo(data[0].tipo as any);
@@ -175,6 +191,8 @@ export function PagadorasYHistoriasPage() {
         parrafos: cartaParrafos,
         instrucciones: historial ? "EVITA REPETIR ESTAS CARTAS ANTERIORES:\n" + historial : "",
       });
+      const newId = "gen_carta_" + Date.now();
+      setCurrentCartaGenId(newId);
       setCartaContenido(res.contenido);
       const nuevas = [...cartasGeneradasHistorial, res.contenido].slice(-10);
       setCartasGeneradasHistorial(nuevas);
@@ -200,8 +218,9 @@ export function PagadorasYHistoriasPage() {
       showError("Ingresa un título para guardar la carta");
       return;
     }
+    const nuevaId = "carta_" + Date.now();
     const nueva: CartaGuardada = {
-      id: "carta_" + Date.now(),
+      id: nuevaId,
       perfil_id: selectedPerfilId,
       titulo: saveCartaTitulo.trim(),
       tipo: cartaTipo,
@@ -209,6 +228,13 @@ export function PagadorasYHistoriasPage() {
       pagadora: saveCartaPagadora || undefined,
       fecha_creacion: new Date().toISOString(),
     };
+    if (selectedPerfilId && currentCartaGenId && estudioDocId === currentCartaGenId) {
+      const oldKey = `posiciones_pagadoras_${selectedPerfilId}_${currentCartaGenId}`;
+      const savedPos = localStorage.getItem(oldKey);
+      if (savedPos) {
+        localStorage.setItem(`posiciones_pagadoras_${selectedPerfilId}_carta_${nuevaId}`, savedPos);
+      }
+    }
     const actualizadas = [nueva, ...cartasGuardadas];
     saveCartasGuardadasToStorage(actualizadas);
     setShowSaveCartaModal(false);
@@ -222,6 +248,8 @@ export function PagadorasYHistoriasPage() {
   };
 
   const handleCargarCartaEnEstudio = (carta: CartaGuardada) => {
+    setEditingHistoria(null);
+    setEstudioDocId("carta_" + carta.id);
     setEditorTitulo(carta.titulo);
     setEditorContent(carta.contenido);
     setEditorTipo(carta.tipo === "sexual" ? "sexual" : "romantica");
@@ -270,7 +298,9 @@ export function PagadorasYHistoriasPage() {
       const nuevasPos = { ...posicionesPagadoras };
       delete nuevasPos[nombre];
       setPosicionesPagadoras(nuevasPos);
-      localStorage.setItem("posiciones_pagadoras_" + selectedPerfilId, JSON.stringify(nuevasPos));
+      if (selectedPerfilId) {
+        localStorage.setItem(`posiciones_pagadoras_${selectedPerfilId}_${estudioDocId}`, JSON.stringify(nuevasPos));
+      }
       success(`Pagadora "${nombre}" eliminada`);
       loadPagadoras();
       loadHistorias();
@@ -282,6 +312,7 @@ export function PagadorasYHistoriasPage() {
   // === HISTORIAS ===
   const openNewHistoria = () => {
     setEditingHistoria(null);
+    setEstudioDocId("nueva_historia_" + Date.now());
     setEditorTitulo("");
     setEditorTipo("romantica");
     setEditorPagadoraAsociada("");
@@ -301,6 +332,8 @@ export function PagadorasYHistoriasPage() {
         pagadora: editorPagadoraAsociada || undefined,
       });
       setShowAIGenerator(false);
+      setEditingHistoria(null);
+      setEstudioDocId("ai_historia_" + Date.now());
       setEditorContent(res.contenido);
       setActiveTab("estudio_lector");
       success("Historia generada con éxito");
@@ -313,6 +346,7 @@ export function PagadorasYHistoriasPage() {
 
   const openAbrirEnEstudio = (h: HistoriaGuardada) => {
     setEditingHistoria(h);
+    setEstudioDocId("historia_" + h.id);
     setEditorContent(h.contenido);
     setEditorTitulo(h.titulo);
     setEditorTipo(h.tipo as any);
@@ -362,7 +396,7 @@ export function PagadorasYHistoriasPage() {
     ? editorContent.split(/\n\s*\n/).filter((p) => p.trim().length > 0)
     : [];
 
-  // Actualizar posición del marcador de una pagadora
+  // Actualizar posición del marcador de una pagadora para el documento actual
   const updatePagadoraPosition = (pagadora: string, pIdx: number) => {
     const targetIdx = Math.max(0, Math.min(parrafos.length - 1, pIdx));
     const updated = {
@@ -370,8 +404,19 @@ export function PagadorasYHistoriasPage() {
       [pagadora]: targetIdx,
     };
     setPosicionesPagadoras(updated);
-    localStorage.setItem("posiciones_pagadoras_" + selectedPerfilId, JSON.stringify(updated));
+    if (selectedPerfilId) {
+      localStorage.setItem(`posiciones_pagadoras_${selectedPerfilId}_${estudioDocId}`, JSON.stringify(updated));
+    }
     scrollToParagraph(targetIdx);
+  };
+
+  // Reiniciar todos los marcadores al párrafo 1 para el documento actual
+  const resetMarcadores = () => {
+    setPosicionesPagadoras({});
+    if (selectedPerfilId) {
+      localStorage.removeItem(`posiciones_pagadoras_${selectedPerfilId}_${estudioDocId}`);
+    }
+    success("Marcadores reiniciados al párrafo 1 para este texto");
   };
 
   const scrollToParagraph = (idx: number) => {
@@ -626,9 +671,13 @@ export function PagadorasYHistoriasPage() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          const docId = currentCartaGenId || ("gen_carta_" + Date.now());
+                          setEstudioDocId(docId);
+                          setEditingHistoria(null);
                           setEditorTitulo(`Carta ${cartaTipo === "romantica" ? "Romántica" : "Sexual"} (${cartaParrafos} párrafos)`);
                           setEditorContent(cartaContenido);
                           setEditorTipo(cartaTipo === "sexual" ? "sexual" : "romantica");
+                          setEditorPagadoraAsociada(cartaPagadora || "");
                           setActiveTab("estudio_lector");
                         }}
                         className="text-xs text-purple-600 dark:text-purple-400"
@@ -851,11 +900,24 @@ export function PagadorasYHistoriasPage() {
                   </span>
                 </div>
 
-                {pagadoras.length === 0 && (
-                  <Button size="sm" variant="outline" onClick={openPagadoraModal} className="text-xs">
-                    <UserPlus className="w-3.5 h-3.5 mr-1" /> Crear Pagadora
-                  </Button>
-                )}
+                <div className="flex items-center gap-2">
+                  {pagadoras.length > 0 && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={resetMarcadores}
+                      className="text-xs text-gray-600 dark:text-gray-300 hover:text-purple-600 dark:hover:text-purple-400"
+                      title="Reiniciar todos los marcadores al párrafo 1 en esta carta"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 mr-1" /> Reiniciar Marcadores
+                    </Button>
+                  )}
+                  {pagadoras.length === 0 && (
+                    <Button size="sm" variant="outline" onClick={openPagadoraModal} className="text-xs">
+                      <UserPlus className="w-3.5 h-3.5 mr-1" /> Crear Pagadora
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {pagadoras.length === 0 ? (
