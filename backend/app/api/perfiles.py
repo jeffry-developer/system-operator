@@ -133,52 +133,84 @@ async def get_ultimos_mensajes(perfil_id: UUID, current_user: UUID = Depends(get
 
 @router.post("/generar-saludos-rapidos")
 async def generar_saludos_rapidos(current_user: UUID = Depends(get_current_user)):
-    """Genera saludos rápidos para todos los perfiles + Cuido"""
+    """Genera saludos unificados en un solo recuadro para todos los perfiles + 2 extras de cuido enfocado en noche y madrugada"""
     perfiles = supabase_service.get_perfiles_by_usuario(current_user)
+    if not perfiles:
+        raise HTTPException(status_code=400, detail="Crea al menos un perfil para generar los saludos.")
+
+    n = len(perfiles)
+    perfiles_desc = "\n".join([f"{i+1}. {p['nombre_perfil']}: Tono/estilo: {p.get('prompt_personalidad', '')[:160]}" for i, p in enumerate(perfiles)])
     
-    resultados = []
+    system_prompt = ai_service._construir_system_prompt("Asistente experto en redacción de saludos de contacto para perfiles de chat.")
     
-    # Generar para cada perfil
-    for perfil in perfiles:
-        try:
-            mensajes = await asyncio.wait_for(
-                asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], [TipoMensaje.SALUDO]),
-                timeout=30.0
-            )
-            resultados.append({
-                "nombre": perfil["nombre_perfil"],
-                "texto": mensajes.get("saludo", "")
-            })
-        except Exception as e:
-            resultados.append({
-                "nombre": perfil["nombre_perfil"],
-                "texto": f"Error al generar: {str(e)}"
+    prompt = f"""Genera un DOCUMENTO COMPLETO Y UNIFICADO con exactamente {n + 2} saludos nocturnos/madrugada: uno para cada perfil registrado del usuario y obligatoriamente dos perfiles extras de cuido al final.
+
+PERFILES REGISTRADOS ({n}):
+{perfiles_desc}
+
+Y DOS PERFILES EXTRAS DE CUIDO AL FINAL (OBLIGATORIOS):
+{n + 1}. Perfil Extra (Cuido, mimo y bienestar protector)
+{n + 2}. Perfil Extra (Cuido, mimo y bienestar protector)
+
+REGLAS OBLIGATORIAS:
+1. HORARIO NOCHE Y MADRUGADA (OBLIGATORIO): Cada saludo debe funcionar y tener perfecto sentido TANTO si se envía de noche COMO si se envía en la madrugada. Emplea expresiones naturales como: "ya sea cerrando el día o transitando la madrugada", "a estas horas de la noche o madrugada", "si andas despierto a estas horas", "para cerrar la jornada o velar la madrugada", etc.
+2. NUNCA REPETIR: Cada saludo debe abordar una perspectiva, metáfora o sensación diferente (desconexión mental, soltar la tensión del rostro o cuerpo, actitud positiva o anécdota graciosa, abrigo y protección suave, suspiro hondo y confort interior). No repitas frases entre saludos.
+3. FORMATO EXACTO REQUERIDO:
+Cada saludo debe constar obligatoriamente de:
+- Un encabezado: [Número]. [Nombre del Perfil] ([Enfoque / Perspectiva breve])
+- Párrafo 1: Escena nocturna de tranquilidad, respiro o pausa, y saludo cercano.
+- Párrafo 2: Reflexión sobre la noche/madrugada que conecte con la tranquilidad y desconexión.
+- Párrafo 3: Deseo de bienestar + pregunta abierta si sigue despierto a estas horas (ej: "¿qué haces cuando quieres que tu mente deje de dar tantas vueltas?", "¿te habías dado cuenta de cuánta tensión guardas a veces en el rostro?").
+- Doble salto de línea entre saludos.
+
+EJEMPLO EXACTO DE LA ESTRUCTURA Y TONO REQUERIDO:
+1. Antonio (Nueva perspectiva y desconexión)
+
+Hay días en los que la mente agradece enormemente colgar los guantes y dejar de buscarle explicaciones a todo. Quise pasar a saludarte en este rato de tranquilidad para compartir un respiro distinto.
+
+Decidí mirar el panorama con la guardia baja, permitiendo que cualquier idea pesada se diluya por sí sola. Esa distancia mental ayuda a desconectar por completo, ya sea cerrando el día o transitando la madrugada.
+
+Ojalá estés disfrutando de un rincón sumamente apacible por allá. Si andas despierto a estas horas, cuéntame: ¿qué haces cuando quieres que tu mente deje de dar tantas vueltas?
+
+2. Juan M (Bienestar, relax y ritmo del día)
+
+Soltar la tensión que acumulamos en la frente y dejar la expresión completamente neutral es un alivio inmediato. Qué buen momento para asomarme a saludarte y desearte total serenidad.
+
+Me propuse revisar esos pequeños puntos donde el cuerpo se contrae sin que lo notemos, para devolverles la calma. Cuidar el bienestar físico a este nivel renueva la energía al instante, sin importar si es de noche o madrugada.
+
+Espero que estés experimentando una soltura muy agradable en este instante. Si tienes un huequito libre por ahí, dime: ¿te habías dado cuenta de cuánta tensión guardas a veces en el rostro?
+
+Genera TODOS los {n + 2} saludos respetando esta estructura exacta."""
+
+    try:
+        contenido = await asyncio.wait_for(
+            asyncio.to_thread(ai_service._llamar_ia, system_prompt, prompt),
+            timeout=90.0
+        )
+        contenido = ai_service._sanitizar_texto(contenido.strip())
+        
+        # Parsear los bloques individuales para visualización flexible
+        import re
+        patron_bloque = re.compile(r'(?:^|\n\n)(?=\d+\.\s+)', re.MULTILINE)
+        partes = [b.strip() for b in patron_bloque.split(contenido) if b.strip()]
+        
+        saludos_individuales = []
+        for p in partes:
+            lineas = p.split('\n', 1)
+            titulo = lineas[0].strip()
+            cuerpo = lineas[1].strip() if len(lineas) > 1 else p
+            saludos_individuales.append({
+                "nombre": titulo,
+                "texto": cuerpo,
+                "completo": p
             })
             
-    # Generar para Cuido (Extra)
-    try:
-        cuido_prompt = "Perfil Extra: Cuido, mimo y bienestar protector. Muy enfocado en el bienestar físico y mental, cariñoso, protector, empático."
-        mensajes_cuido = await asyncio.wait_for(
-            asyncio.to_thread(ai_service.generar_mensajes, cuido_prompt, [TipoMensaje.SALUDO]),
-            timeout=30.0
-        )
-        # Usar el nombre "Cuido (Bienestar protector y mimo)" para el formato
-        texto_cuido = mensajes_cuido.get("saludo", "")
-        # Asegurar que tenga el formato correcto con el nombre Cuido
-        if texto_cuido and not texto_cuido.startswith("1. Cuido"):
-            # La IA ya debería generar el formato, pero si no, lo forzamos
-            pass
-        resultados.append({
-            "nombre": "Cuido (Bienestar protector y mimo)",
-            "texto": texto_cuido
-        })
+        return {
+            "documento_completo": contenido,
+            "saludos": saludos_individuales
+        }
     except Exception as e:
-        resultados.append({
-            "nombre": "Cuido (Bienestar protector y mimo)",
-            "texto": f"Error al generar: {str(e)}"
-        })
-        
-    return resultados
+        raise HTTPException(status_code=500, detail=f"Error al generar saludos unificados: {str(e)}")
 
 
 @router.post("/{perfil_id}/generar-plan-trabajo")
@@ -315,6 +347,7 @@ async def generar_cartas_pagadora(perfil_id: UUID, request: CartasPagadoraReques
     notas = marcador["notas"] if marcador else ""
 
     try:
+        num_parrafos = getattr(request, 'parrafos', 20) or 20
         # Construir prompt con contexto de continuidad
         prompt_contexto = f"""{perfil["prompt_personalidad"]}
 
@@ -324,9 +357,13 @@ CONTEXTO DE CONTINUIDAD PARA PAGADORA '{request.pagadora}':
 - Notas/contexto: {notas}
 - Instrucciones adicionales: {request.instrucciones or 'Ninguna'}
 
-Genera {request.cantidad} cartas NUEVAS continuando desde la #{numero_inicial + 1}.
-Tipo solicitado: {request.tipo} (romantica, sensual, sexual, personalizada, historia).
-Cada carta: 2 párrafos exactamente. Numeradas consecutivamente. Separadas por '---'."""
+REGLAS ESTRICTAS DE GENERACIÓN DE CARTAS:
+- Genera {request.cantidad} carta(s) de tipo '{request.tipo}' (romántica o sexual).
+- LONGITUD OBLIGATORIA: Cada carta DEBE tener EXACTAMENTE {num_parrafos} PÁRRAFOS sustanciosos y detallados, separados entre sí por doble salto de línea.
+- Si el tipo es 'romantica': seductora, profunda, apasionada, íntima, con un ritmo poético y magnético que mantenga enganchada a la lectora durante los {num_parrafos} párrafos.
+- Si el tipo es 'sexual': explícita, táctil, ardiente, erótica, intensa, directa, explorando sensaciones y fantasías continuas durante los {num_parrafos} párrafos.
+- NO uses placeholders como [nombre]. Escribe el texto de corrido de forma inmersiva.
+- Separador entre cartas (si hay más de 1): '---'."""
         
         mensajes = await asyncio.wait_for(
             asyncio.to_thread(ai_service.generar_mensajes, prompt_contexto, [TipoMensaje.CARTA_ROMANTICA]),

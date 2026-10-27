@@ -149,7 +149,7 @@ class ApiService {
   }
 
   // Cartas Pagadoras
-  async generarCartasPagadora(perfilId: string, data: { pagadora: string; tipo: string; cantidad: number; instrucciones?: string }) {
+  async generarCartasPagadora(perfilId: string, data: { pagadora: string; tipo: string; cantidad?: number; parrafos?: number; instrucciones?: string }) {
     const response = await this.client.post(`/perfiles/${perfilId}/generar-cartas-pagadora`, data);
     return response.data;
   }

@@ -38,7 +38,7 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'lg'
         />
         <div
           className={cn(
-            'relative w-full max-h-[90vh] overflow-hidden rounded-xl bg-white shadow-xl transition-all',
+            'relative w-full max-h-[90vh] overflow-hidden rounded-xl bg-white dark:bg-gray-900 shadow-xl transition-all border border-gray-100 dark:border-gray-800',
             size === 'sm' && 'max-w-md',
             size === 'md' && 'max-w-lg',
             size === 'lg' && 'max-w-2xl',
@@ -48,18 +48,18 @@ export function Modal({ isOpen, onClose, title, children, className, size = 'lg'
           )}
         >
           {true && (
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-              {title && <h3 className="text-lg font-semibold text-gray-900">{title}</h3>}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 dark:border-gray-800">
+              {title && <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{title}</h3>}
               <button
                 onClick={onClose}
-                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Cerrar"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
           )}
-          <div className="px-6 py-4 max-h-[calc(90vh-140px)] overflow-y-auto">
+          <div className="px-6 py-4 max-h-[calc(90vh-140px)] overflow-y-auto text-gray-800 dark:text-gray-200">
             {children}
           </div>
         </div>

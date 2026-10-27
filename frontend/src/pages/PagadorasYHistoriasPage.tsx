@@ -3,7 +3,8 @@ import {
   Copy, Loader2, Sparkles, RotateCcw,
   Heart, Plus, Trash2, Eye, BookOpen, UserPlus,
   Save, Bookmark, Edit2, Flag, Check, ChevronRight,
-  Flame, FileText, ArrowRight, Share2, CornerDownRight
+  Flame, FileText, ArrowRight, ChevronLeft, Sliders,
+  CheckCircle2, ArrowUpRight, Compass, LocateFixed
 } from "lucide-react";
 import { api } from "../services/api";
 import { useToast } from "../components/Toast";
@@ -14,32 +15,32 @@ import { Modal } from "../components/Modal";
 import { copyToClipboard, cn } from "../utils/helpers";
 
 const TIPO_CARTA_OPTIONS = [
-  { value: "romantica", label: "Romántica", desc: "Seductora, genera deseo e intimidad", icon: Heart, color: "text-rose-500 bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800" },
-  { value: "sexual", label: "Sexual", desc: "Explícita, apasionada, directa", icon: Flame, color: "text-red-500 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800" },
+  { value: "romantica", label: "Romántica", desc: "Seductora, genera deseo e intimidad", icon: Heart, color: "text-rose-500 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800" },
+  { value: "sexual", label: "Sexual", desc: "Explícita, apasionada, directa", icon: Flame, color: "text-red-500 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800" },
 ];
 
 const TIPO_HISTORIA_OPTIONS = [
-  { value: "romantica", label: "Romántica", color: "bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300" },
-  { value: "sensual", label: "Sensual", color: "bg-pink-100 dark:bg-pink-900/40 text-pink-800 dark:text-pink-300" },
-  { value: "sexual", label: "Sexual", color: "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300" },
-  { value: "personalizada", label: "Personalizada", color: "bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300" },
+  { value: "romantica", label: "Romántica", color: "bg-rose-100 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800" },
+  { value: "sensual", label: "Sensual", color: "bg-pink-100 dark:bg-pink-950/50 text-pink-800 dark:text-pink-300 border-pink-200 dark:border-pink-800" },
+  { value: "sexual", label: "Sexual", color: "bg-red-100 dark:bg-red-950/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800" },
+  { value: "personalizada", label: "Personalizada", color: "bg-purple-100 dark:bg-purple-950/50 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800" },
 ];
 
 const COLORES = [
-  { bg: "bg-rose-500", border: "border-rose-500", text: "text-rose-500", light: "bg-rose-50 dark:bg-rose-950/50" },
-  { bg: "bg-blue-500", border: "border-blue-500", text: "text-blue-500", light: "bg-blue-50 dark:bg-blue-950/50" },
-  { bg: "bg-emerald-500", border: "border-emerald-500", text: "text-emerald-500", light: "bg-emerald-50 dark:bg-emerald-950/50" },
-  { bg: "bg-amber-500", border: "border-amber-500", text: "text-amber-500", light: "bg-amber-50 dark:bg-amber-950/50" },
-  { bg: "bg-purple-500", border: "border-purple-500", text: "text-purple-500", light: "bg-purple-50 dark:bg-purple-950/50" },
-  { bg: "bg-pink-500", border: "border-pink-500", text: "text-pink-500", light: "bg-pink-50 dark:bg-pink-950/50" },
-  { bg: "bg-indigo-500", border: "border-indigo-500", text: "text-indigo-500", light: "bg-indigo-50 dark:bg-indigo-950/50" },
-  { bg: "bg-orange-500", border: "border-orange-500", text: "text-orange-500", light: "bg-orange-50 dark:bg-orange-950/50" },
+  { bg: "bg-rose-500", border: "border-rose-400 dark:border-rose-600", text: "text-rose-600 dark:text-rose-400", light: "bg-rose-50 dark:bg-rose-950/50", glow: "ring-rose-400" },
+  { bg: "bg-blue-500", border: "border-blue-400 dark:border-blue-600", text: "text-blue-600 dark:text-blue-400", light: "bg-blue-50 dark:bg-blue-950/50", glow: "ring-blue-400" },
+  { bg: "bg-emerald-500", border: "border-emerald-400 dark:border-emerald-600", text: "text-emerald-600 dark:text-emerald-400", light: "bg-emerald-50 dark:bg-emerald-950/50", glow: "ring-emerald-400" },
+  { bg: "bg-amber-500", border: "border-amber-400 dark:border-amber-600", text: "text-amber-600 dark:text-amber-400", light: "bg-amber-50 dark:bg-amber-950/50", glow: "ring-amber-400" },
+  { bg: "bg-purple-500", border: "border-purple-400 dark:border-purple-600", text: "text-purple-600 dark:text-purple-400", light: "bg-purple-50 dark:bg-purple-950/50", glow: "ring-purple-400" },
+  { bg: "bg-pink-500", border: "border-pink-400 dark:border-pink-600", text: "text-pink-600 dark:text-pink-400", light: "bg-pink-50 dark:bg-pink-950/50", glow: "ring-pink-400" },
+  { bg: "bg-indigo-500", border: "border-indigo-400 dark:border-indigo-600", text: "text-indigo-600 dark:text-indigo-400", light: "bg-indigo-50 dark:bg-indigo-950/50", glow: "ring-indigo-400" },
+  { bg: "bg-orange-500", border: "border-orange-400 dark:border-orange-600", text: "text-orange-600 dark:text-orange-400", light: "bg-orange-50 dark:bg-orange-950/50", glow: "ring-orange-400" },
 ];
 
 export function PagadorasYHistoriasPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [selectedPerfilId, setSelectedPerfilId] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<"cartas" | "historias" | "pagadoras" | "editor">("cartas");
+  const [activeTab, setActiveTab] = useState<"cartas" | "historias" | "pagadoras" | "estudio_lector">("cartas");
   const [loading, setLoading] = useState(false);
   const { success, error: showError } = useToast();
 
@@ -47,6 +48,7 @@ export function PagadorasYHistoriasPage() {
   const [cartaContenido, setCartaContenido] = useState("");
   const [cartaTipo, setCartaTipo] = useState<"romantica" | "sexual">("romantica");
   const [cartaPagadora, setCartaPagadora] = useState("");
+  const [cartaParrafos, setCartaParrafos] = useState<number>(20); // Por defecto 20 párrafos
   const [generandoCarta, setGenerandoCarta] = useState(false);
   const [cartasGeneradasHistorial, setCartasGeneradasHistorial] = useState<string[]>([]);
   const [cartasGuardadas, setCartasGuardadas] = useState<CartaGuardada[]>([]);
@@ -60,7 +62,7 @@ export function PagadorasYHistoriasPage() {
   const [newPagadoraName, setNewPagadoraName] = useState("");
   const [pagadorasMarcadores, setPagadorasMarcadores] = useState<CartaPagadora[]>([]);
 
-  // === HISTORIAS ===
+  // === HISTORIAS & ESTUDIO ===
   const [historias, setHistorias] = useState<HistoriaGuardada[]>([]);
   const [editingHistoria, setEditingHistoria] = useState<HistoriaGuardada | null>(null);
   const [editorContent, setEditorContent] = useState("");
@@ -71,13 +73,16 @@ export function PagadorasYHistoriasPage() {
   const [viewingHistoria, setViewingHistoria] = useState<HistoriaGuardada | null>(null);
   const [generatingAI, setGeneratingAI] = useState(false);
   const [showAIGenerator, setShowAIGenerator] = useState(false);
+  const [modoEdicionTexto, setModoEdicionTexto] = useState(false);
 
-  // === MARCADORES VISUALES ARRASTRABLES (DRAG & DROP) ===
-  // Mapeo de posiciones visuales de cada pagadora en la historia: { [pagadoraName]: paragraphIndex }
+  // === MARCADORES DE PAGADORAS POR HISTORIA ===
+  // Estructura: { [pagadoraName]: paragraphIndex (0-indexed) }
   const [posicionesPagadoras, setPosicionesPagadoras] = useState<Record<string, number>>({});
+  const [highlightedParagraph, setHighlightedParagraph] = useState<number | null>(null);
   const [draggingPagadora, setDraggingPagadora] = useState<string | null>(null);
 
-  // Helper para asignar colores persistentes a cada pagadora
+  const paragraphRefs = useRef<Record<number, HTMLDivElement | null>>({});
+
   const getColorForPagadora = (nombre: string) => {
     let hash = 0;
     for (let i = 0; i < nombre.length; i++) {
@@ -120,6 +125,14 @@ export function PagadorasYHistoriasPage() {
     try {
       const data = await api.getHistorias(selectedPerfilId);
       setHistorias(data);
+      if (data.length > 0 && !editorContent) {
+        // Cargar primera historia por defecto en el estudio si no hay contenido
+        setEditingHistoria(data[0]);
+        setEditorTitulo(data[0].titulo);
+        setEditorContent(data[0].contenido);
+        setEditorTipo(data[0].tipo as any);
+        setEditorPagadoraAsociada(data[0].pagadora_asociada || "");
+      }
     } catch { }
   };
 
@@ -149,7 +162,7 @@ export function PagadorasYHistoriasPage() {
     }
   };
 
-  // === GENERAR CARTA ===
+  // === GENERAR CARTA (CON 20 PÁRRAFOS POR DEFECTO O CONFIGURABLE) ===
   const handleGenerarCarta = async () => {
     if (!selectedPerfilId) return;
     setGenerandoCarta(true);
@@ -158,16 +171,17 @@ export function PagadorasYHistoriasPage() {
       const res = await api.generarCartasPagadora(selectedPerfilId, {
         pagadora: cartaPagadora || "general",
         tipo: cartaTipo,
-        cantidad: 6,
+        cantidad: 1,
+        parrafos: cartaParrafos,
         instrucciones: historial ? "EVITA REPETIR ESTAS CARTAS ANTERIORES:\n" + historial : "",
       });
       setCartaContenido(res.contenido);
       const nuevas = [...cartasGeneradasHistorial, res.contenido].slice(-10);
       setCartasGeneradasHistorial(nuevas);
       localStorage.setItem("cartas_gen_historial_" + selectedPerfilId, JSON.stringify(nuevas));
-      success("Cartas generadas exitosamente");
+      success(`Carta de ${cartaParrafos} párrafos generada`);
     } catch (e: any) {
-      showError(e.response?.data?.detail || "Error al generar cartas");
+      showError(e.response?.data?.detail || "Error al generar carta");
     } finally {
       setGenerandoCarta(false);
     }
@@ -176,7 +190,7 @@ export function PagadorasYHistoriasPage() {
   // === GUARDAR CARTA PARA REUTILIZAR ===
   const openSaveCartaModal = () => {
     if (!cartaContenido) return;
-    setSaveCartaTitulo(`Carta ${cartaTipo === "romantica" ? "Romántica" : "Sexual"} - ${new Date().toLocaleDateString()}`);
+    setSaveCartaTitulo(`Carta ${cartaTipo === "romantica" ? "Romántica" : "Sexual"} (${cartaParrafos} párrafos) - ${new Date().toLocaleDateString()}`);
     setSaveCartaPagadora(cartaPagadora || "");
     setShowSaveCartaModal(true);
   };
@@ -198,7 +212,7 @@ export function PagadorasYHistoriasPage() {
     const actualizadas = [nueva, ...cartasGuardadas];
     saveCartasGuardadasToStorage(actualizadas);
     setShowSaveCartaModal(false);
-    success("¡Carta guardada en tu banco de cartas reutilizables!");
+    success("¡Carta guardada en tu banco reutilizable!");
   };
 
   const handleDeleteCartaGuardada = (id: string) => {
@@ -207,13 +221,13 @@ export function PagadorasYHistoriasPage() {
     success("Carta eliminada");
   };
 
-  const handleCargarCartaEnEditor = (carta: CartaGuardada) => {
+  const handleCargarCartaEnEstudio = (carta: CartaGuardada) => {
     setEditorTitulo(carta.titulo);
     setEditorContent(carta.contenido);
     setEditorTipo(carta.tipo === "sexual" ? "sexual" : "romantica");
     setEditorPagadoraAsociada(carta.pagadora || "");
-    setActiveTab("editor");
-    success("Carta cargada en el Editor");
+    setActiveTab("estudio_lector");
+    success("Carta cargada en el Estudio como historia interactiva");
   };
 
   // === PAGADORAS ===
@@ -234,6 +248,7 @@ export function PagadorasYHistoriasPage() {
         pagadora: nombre,
         tipo: "romantica",
         cantidad: 0,
+        parrafos: 1,
         instrucciones: "",
       });
       success(`Pagadora "${nombre}" creada`);
@@ -252,7 +267,6 @@ export function PagadorasYHistoriasPage() {
         tipo: "romantica",
         cantidad: 0,
       });
-      // Limpiar posición
       const nuevasPos = { ...posicionesPagadoras };
       delete nuevasPos[nombre];
       setPosicionesPagadoras(nuevasPos);
@@ -288,7 +302,7 @@ export function PagadorasYHistoriasPage() {
       });
       setShowAIGenerator(false);
       setEditorContent(res.contenido);
-      setActiveTab("editor");
+      setActiveTab("estudio_lector");
       success("Historia generada con éxito");
     } catch (e: any) {
       showError(e.response?.data?.detail || "Error al generar historia con IA");
@@ -297,13 +311,13 @@ export function PagadorasYHistoriasPage() {
     }
   };
 
-  const openEditHistoria = (h: HistoriaGuardada) => {
+  const openAbrirEnEstudio = (h: HistoriaGuardada) => {
     setEditingHistoria(h);
     setEditorContent(h.contenido);
     setEditorTitulo(h.titulo);
     setEditorTipo(h.tipo as any);
     setEditorPagadoraAsociada(h.pagadora_asociada || "");
-    setActiveTab("editor");
+    setActiveTab("estudio_lector");
   };
 
   const saveHistoria = async () => {
@@ -324,7 +338,6 @@ export function PagadorasYHistoriasPage() {
         pagadora_asociada: editorPagadoraAsociada || undefined,
       });
       success(editingHistoria ? "Historia actualizada" : "Historia guardada");
-      setActiveTab("historias");
       loadHistorias();
     } catch (e: any) {
       showError(e.response?.data?.detail || "Error al guardar historia");
@@ -344,20 +357,32 @@ export function PagadorasYHistoriasPage() {
     }
   };
 
-  // Dividir el contenido del editor en párrafos limpios para los marcadores visuales
+  // Párrafos del contenido de la historia
   const parrafos = editorContent
     ? editorContent.split(/\n\s*\n/).filter((p) => p.trim().length > 0)
     : [];
 
-  // Mover posición visual de pagadora al arrastrar o hacer click
+  // Actualizar posición del marcador de una pagadora
   const updatePagadoraPosition = (pagadora: string, pIdx: number) => {
+    const targetIdx = Math.max(0, Math.min(parrafos.length - 1, pIdx));
     const updated = {
       ...posicionesPagadoras,
-      [pagadora]: Math.max(0, Math.min(parrafos.length - 1, pIdx)),
+      [pagadora]: targetIdx,
     };
     setPosicionesPagadoras(updated);
     localStorage.setItem("posiciones_pagadoras_" + selectedPerfilId, JSON.stringify(updated));
-    success(`Marcador de ${pagadora} situado en el párrafo ${pIdx + 1}`);
+    scrollToParagraph(targetIdx);
+  };
+
+  const scrollToParagraph = (idx: number) => {
+    setHighlightedParagraph(idx);
+    const el = paragraphRefs.current[idx];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    setTimeout(() => {
+      setHighlightedParagraph(null);
+    }, 2500);
   };
 
   if (perfiles.length === 0) {
@@ -372,16 +397,18 @@ export function PagadorasYHistoriasPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header unificado */}
+      {/* Header Unificado */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-2">
-            <div className="p-2 bg-gradient-to-tr from-purple-500 to-rose-500 rounded-xl text-white shadow-sm">
+            <div className="p-2 bg-gradient-to-tr from-purple-600 to-rose-600 rounded-xl text-white shadow-sm">
               <BookOpen className="w-5 h-5" />
             </div>
-            Estudio Unificado
+            Estudio (Cartas & Historias)
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">Cartas, pagadoras e historias con marcadores visuales interactivos</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            Generador de cartas de 20 párrafos, historias y seguimiento de pagadoras en tiempo real
+          </p>
         </div>
         <div className="flex flex-col w-full md:w-64">
           <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Perfil Activo</label>
@@ -400,13 +427,13 @@ export function PagadorasYHistoriasPage() {
         </div>
       </div>
 
-      {/* Tabs de Navegación Unificada */}
+      {/* Tabs Principales */}
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
         <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
           {[
-            { id: "cartas", label: "Cartas", emoji: "💌", desc: "Generar y Reutilizar", count: cartasGuardadas.length },
-            { id: "historias", label: "Historias", emoji: "📚", desc: "Narrativas guardadas", count: historias.length },
-            { id: "editor", label: "Editor & Marcador Visual", emoji: "🎯", desc: "Arrastra y sitúa pagadoras" },
+            { id: "cartas", label: "Cartas", emoji: "💌", desc: "Generador (20 párrafos) & Guardadas", count: cartasGuardadas.length },
+            { id: "estudio_lector", label: "Estudio & Marcadores", emoji: "🎯", desc: "Seguimiento visual de pagadoras", activeBadge: parrafos.length > 0 ? `${parrafos.length} párr.` : undefined },
+            { id: "historias", label: "Historias Guardadas", emoji: "📚", desc: "Biblioteca de narrativas", count: historias.length },
             { id: "pagadoras", label: "Pagadoras", emoji: "👥", desc: "Gestión de clientas", count: pagadoras.length },
           ].map((tab) => (
             <button
@@ -415,16 +442,21 @@ export function PagadorasYHistoriasPage() {
               className={cn(
                 "flex-1 min-w-max py-4 px-6 text-sm font-medium transition-all border-b-2 flex flex-col items-center gap-1",
                 activeTab === tab.id
-                  ? "border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-950/30"
+                  ? "border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 bg-purple-50/60 dark:bg-purple-950/40"
                   : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
               )}
             >
               <div className="flex items-center gap-2">
                 <span>{tab.emoji}</span>
-                <span className="font-semibold">{tab.label}</span>
+                <span className="font-bold">{tab.label}</span>
                 {typeof tab.count === "number" && tab.count > 0 && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-semibold">
                     {tab.count}
+                  </span>
+                )}
+                {tab.activeBadge && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 font-semibold">
+                    {tab.activeBadge}
                   </span>
                 )}
               </div>
@@ -434,19 +466,25 @@ export function PagadorasYHistoriasPage() {
         </div>
 
         {/* ============================================================ */}
-        {/* TAB 1: CARTAS (GENERADOR + BANCO REUTILIZABLE) */}
+        {/* TAB 1: GENERADOR DE CARTAS (20 PÁRRAFOS POR DEFECTO + BANCO) */}
         {/* ============================================================ */}
         {activeTab === "cartas" && (
           <div className="p-6 space-y-8">
-            {/* Panel de Generación */}
             <div className="max-w-4xl mx-auto space-y-6">
-              <div className="bg-gradient-to-br from-rose-50/50 to-purple-50/50 dark:from-rose-950/20 dark:to-purple-950/20 p-6 rounded-2xl border border-rose-100/80 dark:border-rose-900/40">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-                  <Sparkles className="w-5 h-5 text-rose-500" />
-                  Generar Cartas (Románticas o Sexuales)
-                </h2>
+              {/* Panel de Generación */}
+              <div className="bg-gradient-to-br from-rose-50/60 to-purple-50/60 dark:from-rose-950/20 dark:to-purple-950/20 p-6 rounded-2xl border border-rose-100/80 dark:border-rose-900/40 space-y-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-rose-500" />
+                    Generar Carta Extensa (Romántica o Sexual)
+                  </h2>
+                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
+                    Defecto: 20 párrafos
+                  </span>
+                </div>
 
-                <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  {/* Selector de Tipo */}
                   <div>
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
                       Tipo de carta
@@ -477,6 +515,7 @@ export function PagadorasYHistoriasPage() {
                     </div>
                   </div>
 
+                  {/* Selector de Pagadora */}
                   <div>
                     <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
                       Pagadora Asociada (opcional)
@@ -496,20 +535,62 @@ export function PagadorasYHistoriasPage() {
                   </div>
                 </div>
 
+                {/* SELECTOR DE LONGITUD DE PÁRRAFOS (DEFECTO 20) */}
+                <div className="bg-white dark:bg-gray-900/80 p-4 rounded-xl border border-rose-100 dark:border-rose-900/40">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
+                      <Sliders className="w-3.5 h-3.5 text-rose-500" />
+                      Longitud de la carta: <span className="text-purple-600 dark:text-purple-400 font-extrabold text-sm">{cartaParrafos} párrafos</span>
+                    </Label>
+                    <span className="text-xs text-gray-400">
+                      (Mínimo 3, por defecto 20, máximo 40)
+                    </span>
+                  </div>
+
+                  {/* Botones rápidos de párrafos */}
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {[10, 15, 20, 25, 30].map((num) => (
+                      <button
+                        key={num}
+                        type="button"
+                        onClick={() => setCartaParrafos(num)}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border",
+                          cartaParrafos === num
+                            ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                            : "bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        )}
+                      >
+                        {num} párrafos {num === 20 && "(por defecto)"}
+                      </button>
+                    ))}
+                  </div>
+
+                  <input
+                    type="range"
+                    min={3}
+                    max={35}
+                    step={1}
+                    value={cartaParrafos}
+                    onChange={(e) => setCartaParrafos(parseInt(e.target.value, 10))}
+                    className="w-full accent-purple-600 dark:accent-purple-400 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                  />
+                </div>
+
                 <Button
                   onClick={handleGenerarCarta}
                   disabled={generandoCarta}
-                  className="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white py-3.5 text-base shadow-sm font-medium"
+                  className="w-full bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-700 hover:to-purple-700 text-white py-3.5 text-base shadow-sm font-semibold"
                 >
                   {generandoCarta ? (
                     <>
                       <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Generando cartas únicas con IA...
+                      Generando carta profunda de {cartaParrafos} párrafos con IA...
                     </>
                   ) : (
                     <>
                       <Heart className="w-5 h-5 mr-2" />
-                      Generar Cartas {cartaTipo === "romantica" ? "Románticas" : "Sexuales"}
+                      Generar Carta {cartaTipo === "romantica" ? "Romántica" : "Sexual"} ({cartaParrafos} Párrafos)
                     </>
                   )}
                 </Button>
@@ -523,10 +604,10 @@ export function PagadorasYHistoriasPage() {
                       <span className="p-1.5 rounded-lg bg-rose-500 text-white">
                         <Heart className="w-4 h-4" />
                       </span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-100">
-                        Cartas Recién Generadas
+                      <span className="font-bold text-gray-900 dark:text-gray-100">
+                        Carta Generada
                       </span>
-                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300 font-medium capitalize">
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300 font-semibold capitalize">
                         {cartaTipo}
                       </span>
                     </div>
@@ -536,13 +617,27 @@ export function PagadorasYHistoriasPage() {
                         variant="primary"
                         size="sm"
                         onClick={openSaveCartaModal}
-                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
                       >
-                        <Save className="w-4 h-4 mr-1.5" />
+                        <Save className="w-3.5 h-3.5 mr-1.5" />
                         Guardar para Reutilizar
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleCopy(cartaContenido)}>
-                        <Copy className="w-4 h-4 mr-1.5" />
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setEditorTitulo(`Carta ${cartaTipo === "romantica" ? "Romántica" : "Sexual"} (${cartaParrafos} párrafos)`);
+                          setEditorContent(cartaContenido);
+                          setEditorTipo(cartaTipo === "sexual" ? "sexual" : "romantica");
+                          setActiveTab("estudio_lector");
+                        }}
+                        className="text-xs text-purple-600 dark:text-purple-400"
+                      >
+                        <Compass className="w-3.5 h-3.5 mr-1" />
+                        Abrir en Estudio & Marcadores
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleCopy(cartaContenido)} className="text-xs">
+                        <Copy className="w-3.5 h-3.5 mr-1" />
                         Copiar
                       </Button>
                       <Button
@@ -552,7 +647,7 @@ export function PagadorasYHistoriasPage() {
                         disabled={generandoCarta}
                         title="Generar nueva variación"
                       >
-                        <RotateCcw className="w-4 h-4" />
+                        <RotateCcw className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -565,7 +660,7 @@ export function PagadorasYHistoriasPage() {
                 </div>
               )}
 
-              {/* Banco de Cartas Guardadas Reutilizables */}
+              {/* BANCO DE CARTAS REUTILIZABLES */}
               <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -574,7 +669,7 @@ export function PagadorasYHistoriasPage() {
                       Banco de Cartas Guardadas (Reutilizables)
                     </h3>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Tus cartas guardadas listas para copiar o enviar a cualquier pagadora
+                      Tus cartas guardadas listas para reutilizar, copiar o cargar en el visor de historias
                     </p>
                   </div>
                   <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800">
@@ -587,7 +682,7 @@ export function PagadorasYHistoriasPage() {
                     <Heart className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                     <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Aún no tienes cartas guardadas</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      Genera cartas arriba y haz clic en "Guardar para Reutilizar" para guardarlas en este banco.
+                      Genera una carta de 20 párrafos arriba y haz clic en "Guardar para Reutilizar".
                     </p>
                   </div>
                 ) : (
@@ -597,7 +692,7 @@ export function PagadorasYHistoriasPage() {
                       return (
                         <div
                           key={c.id}
-                          className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-100 dark:border-gray-800 hover:border-purple-200 dark:hover:border-purple-800/60 shadow-sm transition-all flex flex-col justify-between group"
+                          className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-100 dark:border-gray-800 hover:border-purple-300 dark:hover:border-purple-800 shadow-xs transition-all flex flex-col justify-between"
                         >
                           <div>
                             <div className="flex items-start justify-between gap-2 mb-2">
@@ -617,7 +712,7 @@ export function PagadorasYHistoriasPage() {
                                 </span>
                               )}
                             </div>
-                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-2">{c.titulo}</h4>
+                            <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-2">{c.titulo}</h4>
                             <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-4 leading-relaxed mb-4">
                               {c.contenido}
                             </p>
@@ -635,10 +730,10 @@ export function PagadorasYHistoriasPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleCargarCartaEnEditor(c)}
+                              onClick={() => handleCargarCartaEnEstudio(c)}
                               className="flex-1 text-xs text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30"
                             >
-                              <Edit2 className="w-3.5 h-3.5 mr-1" /> Usar en Editor
+                              <Compass className="w-3.5 h-3.5 mr-1" /> Ver en Estudio
                             </Button>
                             <Button
                               variant="ghost"
@@ -660,7 +755,337 @@ export function PagadorasYHistoriasPage() {
         )}
 
         {/* ============================================================ */}
-        {/* TAB 2: HISTORIAS GUARDADAS */}
+        {/* TAB 2: ESTUDIO Y MARCADORES VISUALES DE PAGADORAS (REDiseño MODERNO) */}
+        {/* ============================================================ */}
+        {activeTab === "estudio_lector" && (
+          <div className="p-6 space-y-6 max-w-5xl mx-auto">
+            {/* Header del Estudio y Selector de Historia */}
+            <div className="bg-white dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-400">
+                  <Compass className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-gray-900 dark:text-gray-100 text-base">
+                    {editorTitulo || "Historia en Estudio"}
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {parrafos.length} {parrafos.length === 1 ? "párrafo estructurado" : "párrafos estructurados"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setModoEdicionTexto(!modoEdicionTexto)}
+                  className="text-xs"
+                >
+                  <Edit2 className="w-3.5 h-3.5 mr-1.5" />
+                  {modoEdicionTexto ? "Ver Lector de Párrafos" : "Editar Texto"}
+                </Button>
+                <Button
+                  onClick={saveHistoria}
+                  disabled={savingHistoria}
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold"
+                >
+                  {savingHistoria ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
+                  Guardar Historia
+                </Button>
+              </div>
+            </div>
+
+            {/* MODO EDICIÓN LIBRE DE TEXTO */}
+            {modoEdicionTexto && (
+              <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <Label htmlFor="titulo_historia">Título de la Historia</Label>
+                    <Input
+                      id="titulo_historia"
+                      value={editorTitulo}
+                      onChange={(e) => setEditorTitulo(e.target.value)}
+                      placeholder="Título de la historia..."
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="tipo_historia">Tipo</Label>
+                    <select
+                      id="tipo_historia"
+                      value={editorTipo}
+                      onChange={(e) => setEditorTipo(e.target.value as any)}
+                      className="input"
+                    >
+                      {TIPO_HISTORIA_OPTIONS.map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Contenido (separa cada párrafo con doble enter)</Label>
+                  <Textarea
+                    value={editorContent}
+                    onChange={(e) => setEditorContent(e.target.value)}
+                    rows={16}
+                    placeholder="Escribe o pega aquí la historia..."
+                    className="font-mono text-xs leading-relaxed"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* PANEL DE CONTROL SUPERIOR DE PAGADORAS (HUD / TRACKER VISUAL) */}
+            <div className="sticky top-2 z-20 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md rounded-2xl p-4 border border-purple-200 dark:border-purple-800/80 shadow-md space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <Flag className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  <span className="font-bold text-gray-900 dark:text-gray-100 text-sm">
+                    Seguimiento de Pagadoras en la Historia
+                  </span>
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold">
+                    {pagadoras.length} {pagadoras.length === 1 ? "pagadora" : "pagadoras"}
+                  </span>
+                </div>
+
+                {pagadoras.length === 0 && (
+                  <Button size="sm" variant="outline" onClick={openPagadoraModal} className="text-xs">
+                    <UserPlus className="w-3.5 h-3.5 mr-1" /> Crear Pagadora
+                  </Button>
+                )}
+              </div>
+
+              {pagadoras.length === 0 ? (
+                <div className="text-center py-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    No tienes pagadoras creadas. Haz clic en "+ Crear Pagadora" para asignar marcadores a esta historia.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {pagadoras.map((pag) => {
+                    const color = getColorForPagadora(pag);
+                    const currentPIdx = posicionesPagadoras[pag] ?? 0;
+                    const maxP = Math.max(0, parrafos.length - 1);
+                    const pct = parrafos.length > 1 ? Math.round((currentPIdx / maxP) * 100) : 100;
+
+                    return (
+                      <div
+                        key={pag}
+                        className={cn(
+                          "p-3 rounded-xl border transition-all shadow-xs flex flex-col justify-between gap-2",
+                          color.light,
+                          color.border
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={cn(
+                                "w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-xs",
+                                color.bg
+                              )}
+                            >
+                              {pag.charAt(0).toUpperCase()}
+                            </span>
+                            <div>
+                              <h4 className="font-bold text-gray-900 dark:text-gray-100 text-xs">{pag}</h4>
+                              <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                                Va en párrafo #{currentPIdx + 1} de {parrafos.length || 1}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-full bg-white dark:bg-gray-900 border", color.border, color.text)}>
+                            {pct}%
+                          </span>
+                        </div>
+
+                        {/* Controles intuitivos de navegación rápida de pagadora */}
+                        <div className="flex items-center gap-1.5 pt-1 border-t border-gray-200/60 dark:border-gray-700/60">
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-7 w-7 text-xs shrink-0"
+                            onClick={() => updatePagadoraPosition(pag, currentPIdx - 1)}
+                            disabled={currentPIdx <= 0}
+                            title="Retroceder al párrafo anterior"
+                          >
+                            <ChevronLeft className="w-3.5 h-3.5" />
+                          </Button>
+
+                          {/* Selector directo de párrafo */}
+                          <select
+                            value={currentPIdx}
+                            onChange={(e) => updatePagadoraPosition(pag, parseInt(e.target.value, 10))}
+                            className="input h-7 py-0 px-2 text-xs text-center font-semibold flex-1"
+                          >
+                            {parrafos.map((_, i) => (
+                              <option key={i} value={i}>
+                                Párrafo {i + 1}
+                              </option>
+                            ))}
+                          </select>
+
+                          <Button
+                            variant="secondary"
+                            size="icon"
+                            className="h-7 w-7 text-xs shrink-0"
+                            onClick={() => updatePagadoraPosition(pag, currentPIdx + 1)}
+                            disabled={currentPIdx >= maxP}
+                            title="Avanzar al siguiente párrafo"
+                          >
+                            <ChevronRight className="w-3.5 h-3.5" />
+                          </Button>
+
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 shrink-0"
+                            onClick={() => scrollToParagraph(currentPIdx)}
+                            title="Localizar en el texto"
+                          >
+                            <LocateFixed className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* VISOR DE LA HISTORIA DIVIDIDO EN TARJETAS DE PÁRRAFOS CLARAS Y MODERNAS */}
+            <div className="space-y-4">
+              {parrafos.length === 0 ? (
+                <div className="p-12 text-center bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                  <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                  <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay contenido en esta historia</h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4">
+                    Haz clic en "Editar Texto" arriba o genera una historia con IA.
+                  </p>
+                  <Button onClick={openNewHistoria} className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
+                    <Sparkles className="w-4 h-4 mr-2" /> Generar Historia con IA
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {parrafos.map((p, idx) => {
+                    const pagadorasAqui = pagadoras.filter(
+                      (pag) => (posicionesPagadoras[pag] ?? 0) === idx
+                    );
+                    const isHighlighted = highlightedParagraph === idx;
+
+                    return (
+                      <div
+                        key={idx}
+                        ref={(el) => (paragraphRefs.current[idx] = el)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          if (draggingPagadora) {
+                            updatePagadoraPosition(draggingPagadora, idx);
+                            setDraggingPagadora(null);
+                          }
+                        }}
+                        className={cn(
+                          "p-5 rounded-2xl border transition-all duration-300 relative group bg-white dark:bg-gray-900 shadow-xs",
+                          pagadorasAqui.length > 0
+                            ? "border-purple-300 dark:border-purple-700 bg-purple-50/30 dark:bg-purple-950/20"
+                            : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700",
+                          isHighlighted && "ring-4 ring-purple-400 dark:ring-purple-600 shadow-lg scale-[1.01]"
+                        )}
+                      >
+                        {/* Header del Párrafo */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-gray-100 dark:border-gray-800">
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                              Párrafo #{idx + 1} de {parrafos.length}
+                            </span>
+                            <span className="text-[11px] text-gray-400">
+                              ({Math.round(((idx + 1) / parrafos.length) * 100)}% de avance)
+                            </span>
+                          </div>
+
+                          {/* INSIGNIAS MODERNAS DE PAGADORAS SITUADAS EN ESTE PÁRRAFO */}
+                          <div className="flex flex-wrap items-center gap-2">
+                            {pagadorasAqui.map((pag) => {
+                              const color = getColorForPagadora(pag);
+                              return (
+                                <span
+                                  key={pag}
+                                  className={cn(
+                                    "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white shadow-xs animate-fadeIn",
+                                    color.bg
+                                  )}
+                                >
+                                  <Flag className="w-3 h-3" />
+                                  {pag} va aquí
+                                </span>
+                              );
+                            })}
+
+                            {/* Botón rápido para situar a cualquier pagadora en este párrafo */}
+                            {pagadoras.length > 0 && (
+                              <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                                <span className="text-[10px] text-gray-400 mr-1">Situar:</span>
+                                {pagadoras.map((pag) => {
+                                  const estaAqui = (posicionesPagadoras[pag] ?? 0) === idx;
+                                  if (estaAqui) return null;
+                                  const color = getColorForPagadora(pag);
+                                  return (
+                                    <button
+                                      key={pag}
+                                      onClick={() => updatePagadoraPosition(pag, idx)}
+                                      className={cn(
+                                        "text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all",
+                                        color.light,
+                                        color.border,
+                                        color.text,
+                                        "hover:scale-105"
+                                      )}
+                                      title={`Mover a ${pag} a este párrafo`}
+                                    >
+                                      + {pag}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Texto del Párrafo */}
+                        <p className="text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-sans">
+                          {p}
+                        </p>
+
+                        {/* Footer del Párrafo con acción de copiar párrafo individual */}
+                        <div className="mt-3 pt-2 flex items-center justify-between text-xs text-gray-400">
+                          <button
+                            onClick={() => handleCopy(p)}
+                            className="flex items-center gap-1 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
+                          >
+                            <Copy className="w-3 h-3" /> Copiar este párrafo
+                          </button>
+                          <span className="text-[10px]">
+                            {pagadorasAqui.length > 0 ? `Marcador activo para ${pagadorasAqui.join(", ")}` : "Sin marcadores"}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 3: BIBLIOTECA DE HISTORIAS GUARDADAS */}
         {/* ============================================================ */}
         {activeTab === "historias" && (
           <div className="p-6 space-y-6">
@@ -671,27 +1096,25 @@ export function PagadorasYHistoriasPage() {
                   Historias Guardadas
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Historias completas para enviar progresivamente a tus pagadoras
+                  Selecciona cualquier historia para abrirla en el Estudio y manipular los marcadores de tus pagadoras
                 </p>
               </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={openNewHistoria}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  <Plus className="w-4 h-4 mr-2" /> Nueva Historia
-                </Button>
-              </div>
+              <Button
+                onClick={openNewHistoria}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs"
+              >
+                <Plus className="w-4 h-4 mr-1.5" /> Nueva Historia con IA
+              </Button>
             </div>
 
             {historias.length === 0 ? (
               <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                 <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200">No hay historias guardadas</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 mt-1">
-                  Genera una historia con IA o escribe una para asociarle pagadoras y marcadores.
+                <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay historias guardadas</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 mt-1">
+                  Genera una historia con IA o carga una carta para llevar el control con marcadores.
                 </p>
-                <Button onClick={openNewHistoria} className="bg-purple-600 hover:bg-purple-700">
+                <Button onClick={openNewHistoria} className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
                   <Sparkles className="w-4 h-4 mr-2" /> Crear primera historia
                 </Button>
               </div>
@@ -700,24 +1123,24 @@ export function PagadorasYHistoriasPage() {
                 {historias.map((h) => (
                   <div
                     key={h.id}
-                    className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all flex flex-col justify-between"
+                    className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-start justify-between mb-3">
                         <span
                           className={cn(
-                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider",
-                            h.tipo === "romantica" && "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
-                            h.tipo === "sensual" && "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300",
-                            h.tipo === "sexual" && "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-                            h.tipo === "personalizada" && "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
+                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider border",
+                            h.tipo === "romantica" && "bg-rose-100 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800",
+                            h.tipo === "sensual" && "bg-pink-100 dark:bg-pink-950/40 text-pink-800 dark:text-pink-300 border-pink-200 dark:border-pink-800",
+                            h.tipo === "sexual" && "bg-red-100 dark:bg-red-950/40 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800",
+                            h.tipo === "personalizada" && "bg-purple-100 dark:bg-purple-950/40 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800"
                           )}
                         >
                           {h.tipo}
                         </span>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => openEditHistoria(h)} title="Editar en Estudio">
-                            <Edit2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          <Button variant="ghost" size="icon" onClick={() => openAbrirEnEstudio(h)} title="Abrir en Estudio">
+                            <Compass className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -730,9 +1153,9 @@ export function PagadorasYHistoriasPage() {
                         </div>
                       </div>
 
-                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1.5 line-clamp-1">{h.titulo}</h3>
+                      <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-1.5 line-clamp-1">{h.titulo}</h3>
                       {h.pagadora_asociada && (
-                        <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-2 flex items-center gap-1">
+                        <p className="text-xs text-purple-600 dark:text-purple-400 font-semibold mb-2 flex items-center gap-1">
                           <UserPlus className="w-3.5 h-3.5" /> Pagadora: {h.pagadora_asociada}
                         </p>
                       )}
@@ -742,8 +1165,13 @@ export function PagadorasYHistoriasPage() {
                     </div>
 
                     <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
-                      <Button variant="outline" size="sm" onClick={() => openEditHistoria(h)} className="flex-1 text-xs">
-                        <Flag className="w-3.5 h-3.5 mr-1 text-purple-600" /> Ver Marcadores
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openAbrirEnEstudio(h)}
+                        className="flex-1 text-xs text-purple-600 dark:text-purple-400"
+                      >
+                        <Compass className="w-3.5 h-3.5 mr-1" /> Abrir en Estudio
                       </Button>
                       <Button variant="ghost" size="sm" onClick={() => setViewingHistoria(h)} className="text-xs">
                         <Eye className="w-3.5 h-3.5 mr-1" /> Leer
@@ -756,315 +1184,6 @@ export function PagadorasYHistoriasPage() {
                 ))}
               </div>
             )}
-          </div>
-        )}
-
-        {/* ============================================================ */}
-        {/* TAB 3: EDITOR CON MARCADOR VISUAL ARRASTRABLE (DRAG & DROP) */}
-        {/* ============================================================ */}
-        {activeTab === "editor" && (
-          <div className="p-6 max-w-5xl mx-auto space-y-6">
-            {/* Header del Editor */}
-            <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50/80 dark:bg-gray-800/80 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
-              <div className="flex items-center gap-3">
-                <div>
-                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Tipo de historia</Label>
-                  <select
-                    value={editorTipo}
-                    onChange={(e) => setEditorTipo(e.target.value as any)}
-                    className="input h-9 py-1 px-3 text-xs w-auto mt-0.5"
-                  >
-                    {TIPO_HISTORIA_OPTIONS.map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Pagadora Principal</Label>
-                  <select
-                    value={editorPagadoraAsociada}
-                    onChange={(e) => setEditorPagadoraAsociada(e.target.value)}
-                    className="input h-9 py-1 px-3 text-xs w-auto mt-0.5"
-                  >
-                    <option value="">-- General / Todas --</option>
-                    {pagadoras.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Button variant="secondary" size="sm" onClick={() => setActiveTab("historias")}>
-                  Volver a lista
-                </Button>
-                <Button
-                  onClick={saveHistoria}
-                  disabled={savingHistoria}
-                  className="bg-purple-600 hover:bg-purple-700 text-white"
-                >
-                  {savingHistoria ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Save className="w-4 h-4 mr-2" />
-                  )}
-                  {editingHistoria ? "Actualizar Historia" : "Guardar Historia"}
-                </Button>
-              </div>
-            </div>
-
-            <Input
-              value={editorTitulo}
-              onChange={(e) => setEditorTitulo(e.target.value)}
-              placeholder="Título de la historia (Ej: Una noche inolvidable en la ciudad...)"
-              className="text-lg font-semibold"
-            />
-
-            {/* SECCIÓN INTERACTIVA DE MARCADOR VISUAL ARRASTRABLE */}
-            <div className="bg-gradient-to-br from-purple-50/60 to-indigo-50/60 dark:from-purple-950/20 dark:to-indigo-950/20 rounded-2xl p-5 border border-purple-100 dark:border-purple-900/50 shadow-sm space-y-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <Flag className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                    Línea de Tiempo Visual: ¿En qué parte de la historia va cada pagadora?
-                  </h3>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Arrastra el marcador de cada pagadora o usa los botones para situarla exactamente donde va
-                  </p>
-                </div>
-
-                {pagadoras.length === 0 && (
-                  <Button size="sm" variant="outline" onClick={openPagadoraModal} className="text-xs">
-                    <UserPlus className="w-3.5 h-3.5 mr-1" /> Crear Pagadora
-                  </Button>
-                )}
-              </div>
-
-              {/* BARRA DE PROGRESO INTERACTIVA */}
-              {parrafos.length > 0 && pagadoras.length > 0 && (
-                <div className="space-y-3 bg-white dark:bg-gray-900 p-4 rounded-xl border border-purple-100/80 dark:border-purple-900/40">
-                  <div className="flex items-center justify-between text-xs text-gray-400">
-                    <span>Inicio (Párrafo 1)</span>
-                    <span className="font-semibold text-purple-600 dark:text-purple-400">
-                      Progreso de Lectura ({parrafos.length} {parrafos.length === 1 ? "párrafo" : "párrafos"})
-                    </span>
-                    <span>Final (Párrafo {parrafos.length})</span>
-                  </div>
-
-                  {/* Pistas / Sliders para cada pagadora */}
-                  <div className="space-y-3 pt-2">
-                    {pagadoras.map((pag) => {
-                      const color = getColorForPagadora(pag);
-                      const currentPIdx = posicionesPagadoras[pag] ?? 0;
-                      const pct = parrafos.length > 1 ? (currentPIdx / (parrafos.length - 1)) * 100 : 100;
-
-                      return (
-                        <div key={pag} className="flex flex-col gap-1.5 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                          <div className="flex items-center justify-between text-xs">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={cn(
-                                  "w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm",
-                                  color.bg
-                                )}
-                              >
-                                {pag.charAt(0).toUpperCase()}
-                              </span>
-                              <span className="font-bold text-gray-800 dark:text-gray-200">{pag}</span>
-                            </div>
-                            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300">
-                              📍 Párrafo {currentPIdx + 1} de {parrafos.length} ({Math.round(pct)}%)
-                            </span>
-                          </div>
-
-                          {/* Control deslizante / arrastrable visual */}
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="range"
-                              min={0}
-                              max={Math.max(0, parrafos.length - 1)}
-                              step={1}
-                              value={currentPIdx}
-                              onChange={(e) => updatePagadoraPosition(pag, parseInt(e.target.value, 10))}
-                              className="w-full accent-purple-600 dark:accent-purple-400 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Botones rápidos de pagadoras para insertar o saltar */}
-              {pagadoras.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                    Marcadores disponibles:
-                  </span>
-                  {pagadoras.map((p) => {
-                    const color = getColorForPagadora(p);
-                    const pos = posicionesPagadoras[p] ?? 0;
-                    return (
-                      <div
-                        key={p}
-                        draggable
-                        onDragStart={() => setDraggingPagadora(p)}
-                        onDragEnd={() => setDraggingPagadora(null)}
-                        className={cn(
-                          "cursor-grab active:cursor-grabbing px-3 py-1.5 rounded-xl border flex items-center gap-2 text-xs font-medium transition-all shadow-sm select-none",
-                          color.light,
-                          color.border
-                        )}
-                        title="Arrastra este marcador sobre cualquier párrafo"
-                      >
-                        <span className={cn("w-2.5 h-2.5 rounded-full", color.bg)} />
-                        <span className="font-semibold text-gray-800 dark:text-gray-200">{p}</span>
-                        <span className="text-[10px] text-gray-400">P{pos + 1}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* VISTA DUAL: PÁRRAFOS VISUALES CON DROP TARGETS + TEXTAREA */}
-            <div className="grid lg:grid-cols-2 gap-6">
-              {/* Columna Izquierda: Vista interactiva de bloques donde se ve y se arrastra a las pagadoras */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                    Fragmentos de la Historia (Arrastra aquí las pagadoras)
-                  </Label>
-                  <span className="text-xs text-gray-400">
-                    {parrafos.length} {parrafos.length === 1 ? "bloque" : "bloques"}
-                  </span>
-                </div>
-
-                {parrafos.length === 0 ? (
-                  <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
-                    <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Escribe tu historia en el editor de la derecha (separa párrafos con enter).
-                      Aquí verás los bloques interactivos para ubicar a tus pagadoras.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                    {parrafos.map((p, idx) => {
-                      // Pagadoras que están en este párrafo
-                      const pagadorasAqui = pagadoras.filter(
-                        (pag) => (posicionesPagadoras[pag] ?? 0) === idx
-                      );
-
-                      return (
-                        <div
-                          key={idx}
-                          onDragOver={(e) => {
-                            e.preventDefault();
-                          }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            if (draggingPagadora) {
-                              updatePagadoraPosition(draggingPagadora, idx);
-                              setDraggingPagadora(null);
-                            }
-                          }}
-                          onClick={() => {
-                            // Si se hace click y hay una pagadora seleccionada, moverla aquí
-                            if (editorPagadoraAsociada) {
-                              updatePagadoraPosition(editorPagadoraAsociada, idx);
-                            }
-                          }}
-                          className={cn(
-                            "p-4 rounded-xl border transition-all text-xs leading-relaxed relative group cursor-pointer",
-                            pagadorasAqui.length > 0
-                              ? "bg-purple-50/70 dark:bg-purple-950/30 border-purple-300 dark:border-purple-800 shadow-sm"
-                              : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
-                          )}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-[10px]">
-                              Párrafo #{idx + 1}
-                            </span>
-
-                            {/* Insignias de pagadoras que están en este párrafo */}
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              {pagadorasAqui.map((pag) => {
-                                const color = getColorForPagadora(pag);
-                                return (
-                                  <span
-                                    key={pag}
-                                    className={cn(
-                                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-white shadow-xs",
-                                      color.bg
-                                    )}
-                                  >
-                                    <Flag className="w-2.5 h-2.5" />
-                                    {pag} está aquí
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          </div>
-
-                          <p className="text-gray-700 dark:text-gray-300 line-clamp-3">{p}</p>
-
-                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                            <span className="text-[10px] text-gray-400">
-                              Haz clic o suelta aquí para marcar posición
-                            </span>
-                            <div className="flex gap-1">
-                              {pagadoras.map((pag) => (
-                                <button
-                                  key={pag}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    updatePagadoraPosition(pag, idx);
-                                  }}
-                                  className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-gray-600 dark:text-gray-300 font-medium"
-                                >
-                                  Mover {pag}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Columna Derecha: Textarea editable */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                    Contenido editable de la Historia
-                  </Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleCopy(editorContent)}
-                    className="text-xs h-7"
-                  >
-                    <Copy className="w-3 h-3 mr-1" /> Copiar todo
-                  </Button>
-                </div>
-
-                <Textarea
-                  value={editorContent}
-                  onChange={(e) => setEditorContent(e.target.value)}
-                  rows={20}
-                  placeholder="Escribe o pega tu historia aquí... Separa párrafos con doble enter para generar bloques visuales con marcadores."
-                  className="font-mono text-xs leading-relaxed bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 focus:border-purple-500 rounded-xl"
-                />
-              </div>
-            </div>
           </div>
         )}
 
@@ -1083,7 +1202,7 @@ export function PagadorasYHistoriasPage() {
                   Clientas a las que les envías cartas y llevas seguimiento de historias
                 </p>
               </div>
-              <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs">
                 <Plus className="w-4 h-4 mr-2" /> Nueva Pagadora
               </Button>
             </div>
@@ -1091,11 +1210,11 @@ export function PagadorasYHistoriasPage() {
             {pagadoras.length === 0 ? (
               <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                 <UserPlus className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="font-semibold text-gray-800 dark:text-gray-200">No hay pagadoras registradas</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 mt-1">
+                <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay pagadoras registradas</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 mt-1">
                   Agrega a tus clientas para asociarles cartas e historias con marcadores visuales.
                 </p>
-                <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700">
+                <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
                   <Plus className="w-4 h-4 mr-2" /> Agregar primera pagadora
                 </Button>
               </div>
@@ -1124,8 +1243,8 @@ export function PagadorasYHistoriasPage() {
                           <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{nombre}</h3>
                           <div className="flex flex-col gap-0.5 mt-1">
                             {typeof posP === "number" && (
-                              <span className="text-xs font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1">
-                                <Flag className="w-3 h-3" /> Párrafo #{posP + 1} de la historia
+                              <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                                <Flag className="w-3 h-3" /> Párrafo #{posP + 1} en Estudio
                               </span>
                             )}
                             {marcador && (
@@ -1154,9 +1273,7 @@ export function PagadorasYHistoriasPage() {
         )}
       </div>
 
-      {/* ============================================================ */}
       {/* MODAL: GUARDAR CARTA PARA REUTILIZAR */}
-      {/* ============================================================ */}
       <Modal
         isOpen={showSaveCartaModal}
         onClose={() => setShowSaveCartaModal(false)}
@@ -1165,7 +1282,7 @@ export function PagadorasYHistoriasPage() {
       >
         <div className="space-y-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Esta carta se guardará en tu banco de cartas. Podrás copiarla, reutilizarla o cargarla en el editor de historias cuando la necesites.
+            Esta carta se guardará en tu banco permanente de cartas reutilizables. Podrás copiarla o abrirla en el estudio cuando la necesites.
           </p>
 
           <div>
@@ -1174,7 +1291,7 @@ export function PagadorasYHistoriasPage() {
               id="carta_save_titulo"
               value={saveCartaTitulo}
               onChange={(e) => setSaveCartaTitulo(e.target.value)}
-              placeholder="Ej: Carta romántica para cuando se ausenta..."
+              placeholder="Ej: Carta romántica profunda de 20 párrafos..."
               required
               autoFocus
             />
@@ -1190,9 +1307,7 @@ export function PagadorasYHistoriasPage() {
             >
               <option value="">-- General (Cualquier clienta) --</option>
               {pagadoras.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
+                <option key={p} value={p}>{p}</option>
               ))}
             </select>
           </div>
@@ -1201,16 +1316,14 @@ export function PagadorasYHistoriasPage() {
             <Button variant="secondary" onClick={() => setShowSaveCartaModal(false)} className="flex-1">
               Cancelar
             </Button>
-            <Button onClick={handleSaveCarta} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white">
+            <Button onClick={handleSaveCarta} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold">
               Guardar Carta
             </Button>
           </div>
         </div>
       </Modal>
 
-      {/* ============================================================ */}
       {/* MODAL: NUEVA PAGADORA */}
-      {/* ============================================================ */}
       <Modal isOpen={showPagadoraModal} onClose={() => setShowPagadoraModal(false)} title="Nueva Pagadora" size="sm">
         <form
           onSubmit={(e) => {
@@ -1234,16 +1347,14 @@ export function PagadorasYHistoriasPage() {
             <Button type="button" variant="secondary" onClick={() => setShowPagadoraModal(false)} className="flex-1">
               Cancelar
             </Button>
-            <Button type="submit" className="flex-1 bg-purple-600 hover:bg-purple-700 text-white">
+            <Button type="submit" className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold">
               Crear Pagadora
             </Button>
           </div>
         </form>
       </Modal>
 
-      {/* ============================================================ */}
       {/* MODAL: VER HISTORIA COMPLETA */}
-      {/* ============================================================ */}
       <Modal
         isOpen={!!viewingHistoria}
         onClose={() => setViewingHistoria(null)}
@@ -1267,9 +1378,7 @@ export function PagadorasYHistoriasPage() {
         )}
       </Modal>
 
-      {/* ============================================================ */}
       {/* MODAL: GENERAR HISTORIA CON IA */}
-      {/* ============================================================ */}
       <Modal
         isOpen={showAIGenerator}
         onClose={() => setShowAIGenerator(false)}
@@ -1278,7 +1387,7 @@ export function PagadorasYHistoriasPage() {
       >
         <div className="space-y-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            La IA generará una narrativa completa estructurada en párrafos. Luego podrás verla en el Estudio y arrastrar marcadores de pagadoras.
+            La IA generará una narrativa completa estructurada en párrafos. Podrás verla en el Estudio y manipular los marcadores de tus pagadoras.
           </p>
 
           <div>
@@ -1289,9 +1398,7 @@ export function PagadorasYHistoriasPage() {
               className="input"
             >
               {TIPO_HISTORIA_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
+                <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
           </div>
@@ -1302,7 +1409,7 @@ export function PagadorasYHistoriasPage() {
               id="ai_tema"
               value={editorTitulo}
               onChange={(e) => setEditorTitulo(e.target.value)}
-              placeholder="Ej: Encuentro a solas / Fantasía compartida / Tarde de lluvia..."
+              placeholder="Ej: Noche lluviosa a solas / Fantasía compartida..."
               required
               autoFocus
             />
@@ -1318,9 +1425,7 @@ export function PagadorasYHistoriasPage() {
             >
               <option value="">-- Sin pagadora (General) --</option>
               {pagadoras.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
+                <option key={p} value={p}>{p}</option>
               ))}
             </select>
           </div>
@@ -1332,7 +1437,7 @@ export function PagadorasYHistoriasPage() {
             <Button
               onClick={handleAIGenerateHistoria}
               disabled={generatingAI || !editorTitulo.trim()}
-              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
             >
               {generatingAI ? (
                 <>

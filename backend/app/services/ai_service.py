@@ -155,7 +155,7 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=0.95,
-                max_output_tokens=2500,
+                max_output_tokens=6000,
             )
         )
         return response.text if response.text else ""
@@ -169,7 +169,7 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
             model="openai/gpt-oss-120b",
             messages=messages,
             temperature=0.95,
-            max_tokens=2500
+            max_tokens=6000
         )
         return response.choices[0].message.content if response.choices else ""
 

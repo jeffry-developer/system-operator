@@ -146,7 +146,8 @@ class HistoriaGuardada(HistoriaGuardadaBase):
 class CartasPagadoraRequest(BaseModel):
     pagadora: str
     tipo: str = "romantica"  # romantica, sensual, sexual, personalizada, historia
-    cantidad: int = 3
+    cantidad: int = 1
+    parrafos: int = 20  # Cantidad de párrafos por carta (por defecto 20)
     instrucciones: Optional[str] = None
 
 

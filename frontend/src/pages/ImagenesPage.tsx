@@ -128,10 +128,10 @@ export function ImagenesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Imágenes</h1>
-          <p className="text-gray-600">Galería de imágenes sin duplicados por usuario</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Imágenes</h1>
+          <p className="text-gray-600 dark:text-gray-400">Galería de imágenes sin duplicados por usuario</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="danger" onClick={handleDeleteAll} disabled={imagenes.length === 0 || scraping}>
@@ -154,10 +154,10 @@ export function ImagenesPage() {
       </div>
 
       {imagenes.length === 0 ? (
-        <div className="card p-12 text-center">
-          <Image className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">No hay imágenes</h3>
-          <p className="text-gray-600 mb-6">Usa el scraper para descargar imágenes nuevas</p>
+        <div className="card p-12 text-center bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+          <Image className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">No hay imágenes</h3>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Usa el scraper para descargar imágenes nuevas</p>
           <Button onClick={() => setShowScrapeModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Buscar en Pinterest
@@ -232,7 +232,7 @@ export function ImagenesPage() {
 
 function ImagenCard({ imagen, onDelete, onDownload, deleting }: { imagen: ImagenDescargada; onDelete: (id: string) => void; onDownload: (url: string, id: string) => void; deleting: boolean }) {
   return (
-    <div className="relative group card overflow-hidden bg-gray-50">
+    <div className="relative group card overflow-hidden bg-gray-50 dark:bg-gray-800/80 border border-gray-100 dark:border-gray-700 shadow-xs">
       <div className="aspect-[3/4] relative overflow-hidden">
         <img
           src={imagen.url_origen}
@@ -244,14 +244,14 @@ function ImagenCard({ imagen, onDelete, onDownload, deleting }: { imagen: Imagen
             e.currentTarget.nextElementSibling?.classList.remove('hidden');
           }}
         />
-        <div className="hidden absolute inset-0 bg-gray-100 flex items-center justify-center">
+        <div className="hidden absolute inset-0 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
           <Image className="w-8 h-8 text-gray-400" />
         </div>
       </div>
 
       <div className="p-2 space-y-2">
         <div className="flex items-center justify-between">
-          <span className={cn('badge text-xs', imagen.etiqueta === 'sensual' ? 'bg-pink-100 text-pink-800' : 'bg-primary-100 text-primary-800')}>
+          <span className={cn('badge text-xs font-semibold', imagen.etiqueta === 'sensual' ? 'bg-pink-100 dark:bg-pink-950/40 text-pink-800 dark:text-pink-300' : 'bg-primary-100 dark:bg-primary-950/40 text-primary-800 dark:text-primary-300')}>
             {imagen.etiqueta}
           </span>
         </div>
