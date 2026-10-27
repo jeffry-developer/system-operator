@@ -1,184 +1,300 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Copy, Loader2, Sparkles, RotateCcw, Heart, Zap, 
-  Plus, Trash2, Eye, BookOpen, UserPlus, 
-  ChevronDown, ChevronUp, Hash, MessageSquare, 
-  Save, AlertCircle, Bookmark, BookmarkCheck,
-  Edit2, Flag, Scissors, ArrowRight, Minus
-} from 'lucide-react';
-import { api } from '../services/api';
-import { useToast } from '../components/Toast';
-import { Perfil, HistoriaGuardada, CartaPagadora } from '../types';
-import { Button } from '../components/Button';
-import { Input, Label, Textarea } from '../components/Input';
-import { Modal } from '../components/Modal';
-import { copyToClipboard } from '../utils/helpers';
-import { cn } from '../utils/helpers';
+import { useState, useEffect, useRef } from "react";
+import {
+  Copy, Loader2, Sparkles, RotateCcw,
+  Heart, Plus, Trash2, Eye, BookOpen, UserPlus,
+  Save, Bookmark, Edit2, Flag, Check, ChevronRight,
+  Flame, FileText, ArrowRight, Share2, CornerDownRight
+} from "lucide-react";
+import { api } from "../services/api";
+import { useToast } from "../components/Toast";
+import { Perfil, HistoriaGuardada, CartaPagadora, CartaGuardada } from "../types";
+import { Button } from "../components/Button";
+import { Input, Label, Textarea } from "../components/Input";
+import { Modal } from "../components/Modal";
+import { copyToClipboard, cn } from "../utils/helpers";
 
-const TIPO_HISTORIA_OPTIONS = [
-  { value: 'romantica', label: 'Romántica', desc: 'Tierna, emocional, conexión profunda', color: 'bg-rose-100 text-rose-800' },
-  { value: 'sensual', label: 'Sensual', desc: 'Insinuante, erótica suave, deseo', color: 'bg-pink-100 text-pink-800' },
-  { value: 'sexual', label: 'Sexual', desc: 'Explícita, pasión, intimidad total', color: 'bg-red-100 text-red-800' },
-  { value: 'personalizada', label: 'Personalizada', desc: 'Tema libre que tú indiques', color: 'bg-purple-100 text-purple-800' },
+const TIPO_CARTA_OPTIONS = [
+  { value: "romantica", label: "Romántica", desc: "Seductora, genera deseo e intimidad", icon: Heart, color: "text-rose-500 bg-rose-50 dark:bg-rose-900/30 border-rose-200 dark:border-rose-800" },
+  { value: "sexual", label: "Sexual", desc: "Explícita, apasionada, directa", icon: Flame, color: "text-red-500 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800" },
 ];
 
-interface MarcadorHistoria {
-  id: string;
-  pagadora: string;
-  posicion: number; // índice de carácter en el texto
-  nota: string;
-  color: string;
-}
+const TIPO_HISTORIA_OPTIONS = [
+  { value: "romantica", label: "Romántica", color: "bg-rose-100 dark:bg-rose-900/40 text-rose-800 dark:text-rose-300" },
+  { value: "sensual", label: "Sensual", color: "bg-pink-100 dark:bg-pink-900/40 text-pink-800 dark:text-pink-300" },
+  { value: "sexual", label: "Sexual", color: "bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300" },
+  { value: "personalizada", label: "Personalizada", color: "bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300" },
+];
+
+const COLORES = [
+  { bg: "bg-rose-500", border: "border-rose-500", text: "text-rose-500", light: "bg-rose-50 dark:bg-rose-950/50" },
+  { bg: "bg-blue-500", border: "border-blue-500", text: "text-blue-500", light: "bg-blue-50 dark:bg-blue-950/50" },
+  { bg: "bg-emerald-500", border: "border-emerald-500", text: "text-emerald-500", light: "bg-emerald-50 dark:bg-emerald-950/50" },
+  { bg: "bg-amber-500", border: "border-amber-500", text: "text-amber-500", light: "bg-amber-50 dark:bg-amber-950/50" },
+  { bg: "bg-purple-500", border: "border-purple-500", text: "text-purple-500", light: "bg-purple-50 dark:bg-purple-950/50" },
+  { bg: "bg-pink-500", border: "border-pink-500", text: "text-pink-500", light: "bg-pink-50 dark:bg-pink-950/50" },
+  { bg: "bg-indigo-500", border: "border-indigo-500", text: "text-indigo-500", light: "bg-indigo-50 dark:bg-indigo-950/50" },
+  { bg: "bg-orange-500", border: "border-orange-500", text: "text-orange-500", light: "bg-orange-50 dark:bg-orange-950/50" },
+];
 
 export function PagadorasYHistoriasPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
-  const [selectedPerfilId, setSelectedPerfilId] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'pagadoras' | 'historias' | 'editor'>('pagadoras');
+  const [selectedPerfilId, setSelectedPerfilId] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<"cartas" | "historias" | "pagadoras" | "editor">("cartas");
   const [loading, setLoading] = useState(false);
   const { success, error: showError } = useToast();
 
-  // Pagadoras simples - solo nombre
+  // === CARTAS ===
+  const [cartaContenido, setCartaContenido] = useState("");
+  const [cartaTipo, setCartaTipo] = useState<"romantica" | "sexual">("romantica");
+  const [cartaPagadora, setCartaPagadora] = useState("");
+  const [generandoCarta, setGenerandoCarta] = useState(false);
+  const [cartasGeneradasHistorial, setCartasGeneradasHistorial] = useState<string[]>([]);
+  const [cartasGuardadas, setCartasGuardadas] = useState<CartaGuardada[]>([]);
+  const [showSaveCartaModal, setShowSaveCartaModal] = useState(false);
+  const [saveCartaTitulo, setSaveCartaTitulo] = useState("");
+  const [saveCartaPagadora, setSaveCartaPagadora] = useState("");
+
+  // === PAGADORAS ===
   const [pagadoras, setPagadoras] = useState<string[]>([]);
   const [showPagadoraModal, setShowPagadoraModal] = useState(false);
-  const [newPagadoraName, setNewPagadoraName] = useState('');
+  const [newPagadoraName, setNewPagadoraName] = useState("");
+  const [pagadorasMarcadores, setPagadorasMarcadores] = useState<CartaPagadora[]>([]);
 
-  // Historias con editor visual
+  // === HISTORIAS ===
   const [historias, setHistorias] = useState<HistoriaGuardada[]>([]);
   const [editingHistoria, setEditingHistoria] = useState<HistoriaGuardada | null>(null);
-  const [showEditor, setShowEditor] = useState(false);
-  const [editorContent, setEditorContent] = useState('');
-  const [editorTipo, setEditorTipo] = useState<'romantica' | 'sensual' | 'sexual' | 'personalizada'>('romantica');
-  const [editorTitulo, setEditorTitulo] = useState('');
-  const [editorPagadoraAsociada, setEditorPagadoraAsociada] = useState<string>('');
-  const [marcadores, setMarcadores] = useState<MarcadorHistoria[]>([]);
-  const [nextMarcadorId, setNextMarcadorId] = useState(1);
-
-  const getNextMarcadorId = () => {
-    let id = 0;
-    setNextMarcadorId(prev => { id = prev; return prev + 1; });
-    return id;
-  };
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const [generatingHistoria, setGeneratingHistoria] = useState(false);
+  const [editorContent, setEditorContent] = useState("");
+  const [editorTipo, setEditorTipo] = useState<"romantica" | "sensual" | "sexual" | "personalizada">("romantica");
+  const [editorTitulo, setEditorTitulo] = useState("");
+  const [editorPagadoraAsociada, setEditorPagadoraAsociada] = useState<string>("");
+  const [savingHistoria, setSavingHistoria] = useState(false);
   const [viewingHistoria, setViewingHistoria] = useState<HistoriaGuardada | null>(null);
+  const [generatingAI, setGeneratingAI] = useState(false);
+  const [showAIGenerator, setShowAIGenerator] = useState(false);
 
-  // Colores para marcadores por pagadora
-  const coloresMarcadores = [
-    'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500', 
-    'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-orange-500'
-  ];
-  const pagadoraColors = new Map<string, string>();
+  // === MARCADORES VISUALES ARRASTRABLES (DRAG & DROP) ===
+  // Mapeo de posiciones visuales de cada pagadora en la historia: { [pagadoraName]: paragraphIndex }
+  const [posicionesPagadoras, setPosicionesPagadoras] = useState<Record<string, number>>({});
+  const [draggingPagadora, setDraggingPagadora] = useState<string | null>(null);
 
-  const getColorForPagadora = (pagadora: string) => {
-    if (!pagadoraColors.has(pagadora)) {
-      const color = coloresMarcadores[pagadoraColors.size % coloresMarcadores.length];
-      pagadoraColors.set(pagadora, color);
+  // Helper para asignar colores persistentes a cada pagadora
+  const getColorForPagadora = (nombre: string) => {
+    let hash = 0;
+    for (let i = 0; i < nombre.length; i++) {
+      hash = (hash << 5) - hash + nombre.charCodeAt(i);
+      hash |= 0;
     }
-    return pagadoraColors.get(pagadora)!;
+    const idx = Math.abs(hash) % COLORES.length;
+    return COLORES[idx];
   };
 
   useEffect(() => {
     api.getPerfiles().then((data) => {
       setPerfiles(data);
       if (data.length > 0) setSelectedPerfilId(data[0].id);
-    }).catch(() => showError('Error al cargar perfiles'));
+    }).catch(() => showError("Error al cargar perfiles"));
   }, []);
 
   useEffect(() => {
     if (!selectedPerfilId) return;
     loadPagadoras();
     loadHistorias();
+    loadCartasGuardadas();
+
+    const storedHistorial = localStorage.getItem("cartas_gen_historial_" + selectedPerfilId);
+    if (storedHistorial) setCartasGeneradasHistorial(JSON.parse(storedHistorial));
+
+    const storedPos = localStorage.getItem("posiciones_pagadoras_" + selectedPerfilId);
+    if (storedPos) setPosicionesPagadoras(JSON.parse(storedPos));
   }, [selectedPerfilId]);
 
   const loadPagadoras = async () => {
     try {
       const data = await api.getPagadoras(selectedPerfilId);
+      setPagadorasMarcadores(data);
       setPagadoras(data.map((p: CartaPagadora) => p.nombre_pagadora));
-    } catch { /* ignore */ }
+    } catch { }
   };
 
   const loadHistorias = async () => {
     try {
       const data = await api.getHistorias(selectedPerfilId);
       setHistorias(data);
-    } catch { /* ignore */ }
+    } catch { }
+  };
+
+  const loadCartasGuardadas = () => {
+    try {
+      const key = `cartas_guardadas_${selectedPerfilId}`;
+      const stored = localStorage.getItem(key);
+      if (stored) {
+        setCartasGuardadas(JSON.parse(stored));
+      } else {
+        setCartasGuardadas([]);
+      }
+    } catch { }
+  };
+
+  const saveCartasGuardadasToStorage = (cartas: CartaGuardada[]) => {
+    setCartasGuardadas(cartas);
+    localStorage.setItem(`cartas_guardadas_${selectedPerfilId}`, JSON.stringify(cartas));
   };
 
   const handleCopy = async (text: string) => {
-    try { await copyToClipboard(text); success('Copiado al portapapeles'); } 
-    catch { showError('Error al copiar'); }
+    try {
+      await copyToClipboard(text);
+      success("Copiado al portapapeles");
+    } catch {
+      showError("Error al copiar");
+    }
   };
 
-  // ===== PAGADORAS - Solo nombre =====
+  // === GENERAR CARTA ===
+  const handleGenerarCarta = async () => {
+    if (!selectedPerfilId) return;
+    setGenerandoCarta(true);
+    try {
+      const historial = cartasGeneradasHistorial.slice(-3).join("\n---ANTERIOR---\n");
+      const res = await api.generarCartasPagadora(selectedPerfilId, {
+        pagadora: cartaPagadora || "general",
+        tipo: cartaTipo,
+        cantidad: 6,
+        instrucciones: historial ? "EVITA REPETIR ESTAS CARTAS ANTERIORES:\n" + historial : "",
+      });
+      setCartaContenido(res.contenido);
+      const nuevas = [...cartasGeneradasHistorial, res.contenido].slice(-10);
+      setCartasGeneradasHistorial(nuevas);
+      localStorage.setItem("cartas_gen_historial_" + selectedPerfilId, JSON.stringify(nuevas));
+      success("Cartas generadas exitosamente");
+    } catch (e: any) {
+      showError(e.response?.data?.detail || "Error al generar cartas");
+    } finally {
+      setGenerandoCarta(false);
+    }
+  };
+
+  // === GUARDAR CARTA PARA REUTILIZAR ===
+  const openSaveCartaModal = () => {
+    if (!cartaContenido) return;
+    setSaveCartaTitulo(`Carta ${cartaTipo === "romantica" ? "Romántica" : "Sexual"} - ${new Date().toLocaleDateString()}`);
+    setSaveCartaPagadora(cartaPagadora || "");
+    setShowSaveCartaModal(true);
+  };
+
+  const handleSaveCarta = () => {
+    if (!saveCartaTitulo.trim()) {
+      showError("Ingresa un título para guardar la carta");
+      return;
+    }
+    const nueva: CartaGuardada = {
+      id: "carta_" + Date.now(),
+      perfil_id: selectedPerfilId,
+      titulo: saveCartaTitulo.trim(),
+      tipo: cartaTipo,
+      contenido: cartaContenido,
+      pagadora: saveCartaPagadora || undefined,
+      fecha_creacion: new Date().toISOString(),
+    };
+    const actualizadas = [nueva, ...cartasGuardadas];
+    saveCartasGuardadasToStorage(actualizadas);
+    setShowSaveCartaModal(false);
+    success("¡Carta guardada en tu banco de cartas reutilizables!");
+  };
+
+  const handleDeleteCartaGuardada = (id: string) => {
+    const actualizadas = cartasGuardadas.filter((c) => c.id !== id);
+    saveCartasGuardadasToStorage(actualizadas);
+    success("Carta eliminada");
+  };
+
+  const handleCargarCartaEnEditor = (carta: CartaGuardada) => {
+    setEditorTitulo(carta.titulo);
+    setEditorContent(carta.contenido);
+    setEditorTipo(carta.tipo === "sexual" ? "sexual" : "romantica");
+    setEditorPagadoraAsociada(carta.pagadora || "");
+    setActiveTab("editor");
+    success("Carta cargada en el Editor");
+  };
+
+  // === PAGADORAS ===
   const openPagadoraModal = () => {
-    setNewPagadoraName('');
+    setNewPagadoraName("");
     setShowPagadoraModal(true);
   };
 
   const createPagadora = async () => {
     if (!newPagadoraName.trim()) return;
-    if (pagadoras.includes(newPagadoraName.trim())) {
-      showError('Esa pagadora ya existe');
+    const nombre = newPagadoraName.trim();
+    if (pagadoras.some((p) => p.toLowerCase() === nombre.toLowerCase())) {
+      showError("Esa pagadora ya existe");
       return;
     }
     try {
-      // Crear marcador inicial vía API (cantidad 0)
       await api.generarCartasPagadora(selectedPerfilId, {
-        pagadora: newPagadoraName.trim(),
-        tipo: 'romantica',
+        pagadora: nombre,
+        tipo: "romantica",
         cantidad: 0,
-        instrucciones: ''
+        instrucciones: "",
       });
-      success(`Pagadora "${newPagadoraName}" creada`);
+      success(`Pagadora "${nombre}" creada`);
       setShowPagadoraModal(false);
       loadPagadoras();
-    } catch { showError('Error al crear pagadora'); }
+    } catch {
+      showError("Error al crear pagadora");
+    }
   };
 
   const deletePagadora = async (nombre: string) => {
-    if (!confirm(`Eliminar pagadora "${nombre}" y sus marcadores en todas las historias?`)) return;
+    if (!confirm(`¿Eliminar la pagadora "${nombre}"?`)) return;
     try {
-      await api.generarCartasPagadora(selectedPerfilId, { pagadora: nombre, tipo: 'romantica', cantidad: 0 });
-      // Limpiar marcadores de esta pagadora en historias locales
-      setMarcadores(prev => prev.filter(m => m.pagadora !== nombre));
-      success('Pagadora eliminada');
+      await api.generarCartasPagadora(selectedPerfilId, {
+        pagadora: nombre,
+        tipo: "romantica",
+        cantidad: 0,
+      });
+      // Limpiar posición
+      const nuevasPos = { ...posicionesPagadoras };
+      delete nuevasPos[nombre];
+      setPosicionesPagadoras(nuevasPos);
+      localStorage.setItem("posiciones_pagadoras_" + selectedPerfilId, JSON.stringify(nuevasPos));
+      success(`Pagadora "${nombre}" eliminada`);
       loadPagadoras();
       loadHistorias();
-    } catch { showError('Error al eliminar'); }
+    } catch {
+      showError("Error al eliminar pagadora");
+    }
   };
 
-  // ===== FLUJO: NUEVA HISTORIA CON IA =====
-  const [generatingAI, setGeneratingAI] = useState(false);
-  const [aiGeneratedContent, setAiGeneratedContent] = useState<string | null>(null);
-  const [showAIGenerator, setShowAIGenerator] = useState(false);
-
+  // === HISTORIAS ===
   const openNewHistoria = () => {
     setEditingHistoria(null);
-    setEditorTitulo('');
-    setEditorTipo('romantica');
-    setEditorPagadoraAsociada('');
+    setEditorTitulo("");
+    setEditorTipo("romantica");
+    setEditorPagadoraAsociada("");
     setShowAIGenerator(true);
   };
 
-  const handleAIGenerate = async () => {
-    if (!editorTitulo.trim()) { showError('Pon un título/tema'); return; }
+  const handleAIGenerateHistoria = async () => {
+    if (!editorTitulo.trim()) {
+      showError("Ingresa un título o tema");
+      return;
+    }
     setGeneratingAI(true);
     try {
       const res = await api.generarHistoria(selectedPerfilId, {
         tipo: editorTipo,
         tema: editorTitulo,
-        pagadora: editorPagadoraAsociada || undefined
+        pagadora: editorPagadoraAsociada || undefined,
       });
-      setAiGeneratedContent(res.contenido);
       setShowAIGenerator(false);
-      // Abrir editor con contenido generado
       setEditorContent(res.contenido);
-      setMarcadores([]);
-      setNextMarcadorId(1);
-      setShowEditor(true);
-      setActiveTab('editor');
-    } catch (e: any) { showError(e.response?.data?.detail || 'Error al generar con IA'); }
-    finally { setGeneratingAI(false); }
+      setActiveTab("editor");
+      success("Historia generada con éxito");
+    } catch (e: any) {
+      showError(e.response?.data?.detail || "Error al generar historia con IA");
+    } finally {
+      setGeneratingAI(false);
+    }
   };
 
   const openEditHistoria = (h: HistoriaGuardada) => {
@@ -186,282 +302,454 @@ export function PagadorasYHistoriasPage() {
     setEditorContent(h.contenido);
     setEditorTitulo(h.titulo);
     setEditorTipo(h.tipo as any);
-    setEditorPagadoraAsociada(h.pagadora_asociada || '');
-    setMarcadores([]);
-    setNextMarcadorId(1);
-    setShowEditor(true);
-    setActiveTab('editor');
-  };
-
-  // Insertar marcador en posición actual del cursor
-  const insertMarcador = (pagadora: string, nota: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    
-    const posicion = textarea.selectionStart;
-    const color = getColorForPagadora(pagadora);
-    
-    const nuevoMarcador: MarcadorHistoria = {
-      id: `m${getNextMarcadorId()}`,
-      pagadora,
-      posicion,
-      nota: nota || `Punto para ${pagadora}`,
-      color
-    };
-    
-    setMarcadores(prev => [...prev, nuevoMarcador].sort((a, b) => a.posicion - b.posicion));
-    
-    // Insertar marcador visual en el texto
-    const marca = ` ⟪${pagadora}: ${nota || 'marcador'}⟫ `;
-    const antes = editorContent.substring(0, posicion);
-    const despues = editorContent.substring(posicion);
-    setEditorContent(antes + marca + despues);
-    
-    // Ajustar posiciones de marcadores posteriores
-    setMarcadores(prev => prev.map(m => 
-      m.id === nuevoMarcador.id ? m : 
-      m.posicion >= posicion ? { ...m, posicion: m.posicion + marca.length } : m
-    ));
-  };
-
-  const removeMarcador = (id: string) => {
-    const marcador = marcadores.find(m => m.id === id);
-    if (!marcador) return;
-    
-    // Quitar del texto
-    const marca = ` ⟪${marcador.pagadora}: ${marcador.nota || 'marcador'}⟫ `;
-    const pos = editorContent.indexOf(marca);
-    if (pos >= 0) {
-      const nuevoTexto = editorContent.substring(0, pos) + editorContent.substring(pos + marca.length);
-      setEditorContent(nuevoTexto);
-      
-      // Ajustar posiciones
-      setMarcadores(prev => prev
-        .filter(m => m.id !== id)
-        .map(m => m.posicion > pos ? { ...m, posicion: m.posicion - marca.length } : m)
-      );
-    } else {
-      setMarcadores(prev => prev.filter(m => m.id !== id));
-    }
+    setEditorPagadoraAsociada(h.pagadora_asociada || "");
+    setActiveTab("editor");
   };
 
   const saveHistoria = async () => {
     if (!editorTitulo.trim() || !editorContent.trim()) {
-      showError('Título y contenido son requeridos');
+      showError("Título y contenido son requeridos");
       return;
     }
+    setSavingHistoria(true);
     try {
       if (editingHistoria) {
-        // Actualizar: borrar y recrear
         await api.deleteHistoria(selectedPerfilId, editingHistoria.id);
       }
-      const res = await api.generarHistoria(selectedPerfilId, {
-        tipo: editorTipo,
-        tema: editorTitulo,
-        pagadora: editorPagadoraAsociada || undefined
-      });
-      // Sobrescribir con nuestro contenido editado
-      const historiaData = {
+      await api.saveHistoria({
         perfil_id: selectedPerfilId,
         titulo: editorTitulo,
         tipo: editorTipo,
         contenido: editorContent,
-        pagadora_asociada: editorPagadoraAsociada || undefined
-      };
-      await api.saveHistoria(historiaData as any);
-      
-      success(editingHistoria ? 'Historia actualizada' : 'Historia guardada');
-      setShowEditor(false);
+        pagadora_asociada: editorPagadoraAsociada || undefined,
+      });
+      success(editingHistoria ? "Historia actualizada" : "Historia guardada");
+      setActiveTab("historias");
       loadHistorias();
-    } catch (e: any) { showError(e.response?.data?.detail || 'Error al guardar'); }
+    } catch (e: any) {
+      showError(e.response?.data?.detail || "Error al guardar historia");
+    } finally {
+      setSavingHistoria(false);
+    }
   };
 
   const deleteHistoria = async (id: string) => {
-    if (!confirm('Eliminar esta historia?')) return;
+    if (!confirm("¿Eliminar esta historia?")) return;
     try {
       await api.deleteHistoria(selectedPerfilId, id);
-      success('Historia eliminada');
+      success("Historia eliminada");
       loadHistorias();
-    } catch { showError('Error al eliminar'); }
+    } catch {
+      showError("Error al eliminar historia");
+    }
   };
 
-  // Manejar click en marcador inline para editar
-  const [editingInlineMarcador, setEditingInlineMarcador] = useState<MarcadorHistoria | null>(null);
-  const [inlineNota, setInlineNota] = useState('');
+  // Dividir el contenido del editor en párrafos limpios para los marcadores visuales
+  const parrafos = editorContent
+    ? editorContent.split(/\n\s*\n/).filter((p) => p.trim().length > 0)
+    : [];
 
-  const handleMarcadorClick = (m: MarcadorHistoria) => {
-    setEditingInlineMarcador(m);
-    setInlineNota(m.nota);
+  // Mover posición visual de pagadora al arrastrar o hacer click
+  const updatePagadoraPosition = (pagadora: string, pIdx: number) => {
+    const updated = {
+      ...posicionesPagadoras,
+      [pagadora]: Math.max(0, Math.min(parrafos.length - 1, pIdx)),
+    };
+    setPosicionesPagadoras(updated);
+    localStorage.setItem("posiciones_pagadoras_" + selectedPerfilId, JSON.stringify(updated));
+    success(`Marcador de ${pagadora} situado en el párrafo ${pIdx + 1}`);
   };
 
-  const saveInlineNota = () => {
-    if (!editingInlineMarcador) return;
-    setMarcadores(prev => prev.map(m => 
-      m.id === editingInlineMarcador.id ? { ...m, nota: inlineNota } : m
-    ));
-    // Actualizar en el texto
-    const oldMarca = ` ⟪${editingInlineMarcador.pagadora}: ${editingInlineMarcador.nota || 'marcador'}⟫ `;
-    const newMarca = ` ⟪${editingInlineMarcador.pagadora}: ${inlineNota || 'marcador'}⟫ `;
-    setEditorContent(prev => prev.replace(oldMarca, newMarca));
-    setEditingInlineMarcador(null);
-  };
-
-  if (perfiles.length === 0) return (
-    <div className="card p-12 text-center">
-      <Sparkles className="w-16 h-16 text-primary-400 mx-auto mb-6 animate-pulse" />
-      <h3 className="text-2xl font-bold text-gray-900 mb-2">Sin perfiles</h3>
-      <p className="text-gray-500">Crea un perfil primero en la pestaña Perfiles.</p>
-    </div>
-  );
-
-  const selectedPerfil = perfiles.find(p => p.id === selectedPerfilId);
+  if (perfiles.length === 0) {
+    return (
+      <div className="card p-12 text-center bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
+        <Sparkles className="w-16 h-16 text-primary-400 mx-auto mb-6 animate-pulse" />
+        <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Sin perfiles activos</h3>
+        <p className="text-gray-500 dark:text-gray-400">Crea un perfil primero en la sección de Perfiles.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      {/* Header unificado */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-            <div className="p-2 bg-purple-100 rounded-lg"><BookOpen className="w-5 h-5 text-purple-600" /></div>
-            Pagadoras e Historias
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-2">
+            <div className="p-2 bg-gradient-to-tr from-purple-500 to-rose-500 rounded-xl text-white shadow-sm">
+              <BookOpen className="w-5 h-5" />
+            </div>
+            Estudio Unificado
           </h1>
-          <p className="text-gray-500">Pagadoras simples + Editor de historias con marcadores visuales por pagadora</p>
+          <p className="text-gray-500 dark:text-gray-400">Cartas, pagadoras e historias con marcadores visuales interactivos</p>
         </div>
-        <div className="flex flex-col md:flex-row gap-3 items-end">
-          <div className="flex flex-col w-full md:w-64">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Perfil Activo</label>
-            <select value={selectedPerfilId} onChange={(e) => setSelectedPerfilId(e.target.value)} className="input" disabled={loading}>
-              {perfiles.map((p) => <option key={p.id} value={p.id}>{p.nombre_perfil}</option>)}
-            </select>
-          </div>
+        <div className="flex flex-col w-full md:w-64">
+          <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Perfil Activo</label>
+          <select
+            value={selectedPerfilId}
+            onChange={(e) => setSelectedPerfilId(e.target.value)}
+            className="input"
+            disabled={loading}
+          >
+            {perfiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre_perfil}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-        <div className="flex border-b border-gray-100">
+      {/* Tabs de Navegación Unificada */}
+      <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
+        <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
           {[
-            { id: 'pagadoras', label: '👥 Pagadoras', desc: 'Solo nombre - simples' },
-            { id: 'historias', label: '📚 Mis Historias', desc: 'Ver, editar, eliminar' },
-            { id: 'editor', label: '✍️ Editor', desc: 'Escribir + marcadores visuales' },
+            { id: "cartas", label: "Cartas", emoji: "💌", desc: "Generar y Reutilizar", count: cartasGuardadas.length },
+            { id: "historias", label: "Historias", emoji: "📚", desc: "Narrativas guardadas", count: historias.length },
+            { id: "editor", label: "Editor & Marcador Visual", emoji: "🎯", desc: "Arrastra y sitúa pagadoras" },
+            { id: "pagadoras", label: "Pagadoras", emoji: "👥", desc: "Gestión de clientas", count: pagadoras.length },
           ].map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
               className={cn(
-                'flex-1 py-4 px-6 text-sm font-medium transition-colors border-b-2',
+                "flex-1 min-w-max py-4 px-6 text-sm font-medium transition-all border-b-2 flex flex-col items-center gap-1",
                 activeTab === tab.id
-                  ? 'border-purple-500 text-purple-600 bg-purple-50'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  ? "border-purple-600 dark:border-purple-400 text-purple-600 dark:text-purple-400 bg-purple-50/50 dark:bg-purple-950/30"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50"
               )}
             >
-              <div className="flex flex-col items-center gap-1">
-                <span>{tab.label}</span>
-                <span className="text-xs text-gray-400">{tab.desc}</span>
+              <div className="flex items-center gap-2">
+                <span>{tab.emoji}</span>
+                <span className="font-semibold">{tab.label}</span>
+                {typeof tab.count === "number" && tab.count > 0 && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                    {tab.count}
+                  </span>
+                )}
               </div>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{tab.desc}</span>
             </button>
           ))}
         </div>
 
-        {/* ===== TAB 1: PAGADORAS SIMPLES ===== */}
-        {activeTab === 'pagadoras' && (
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <UserPlus className="w-5 h-5 text-purple-600" />
-                Pagadoras (Solo Nombre)
-              </h2>
-              <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700">
-                <Plus className="w-4 h-4 mr-2" /> Nueva Pagadora
-              </Button>
-            </div>
+        {/* ============================================================ */}
+        {/* TAB 1: CARTAS (GENERADOR + BANCO REUTILIZABLE) */}
+        {/* ============================================================ */}
+        {activeTab === "cartas" && (
+          <div className="p-6 space-y-8">
+            {/* Panel de Generación */}
+            <div className="max-w-4xl mx-auto space-y-6">
+              <div className="bg-gradient-to-br from-rose-50/50 to-purple-50/50 dark:from-rose-950/20 dark:to-purple-950/20 p-6 rounded-2xl border border-rose-100/80 dark:border-rose-900/40">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-rose-500" />
+                  Generar Cartas (Románticas o Sexuales)
+                </h2>
 
-            {pagadoras.length === 0 ? (
-              <div className="text-center py-12">
-                <UserPlus className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 mb-4">No hay pagadoras</p>
-                <p className="text-sm text-gray-400 mb-6">Crea pagadoras solo con su nombre. Luego úsalas en el editor para marcar puntos en las historias.</p>
-                <Button onClick={openPagadoraModal}>Crear primera pagadora</Button>
+                <div className="grid sm:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
+                      Tipo de carta
+                    </label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {TIPO_CARTA_OPTIONS.map((opt) => {
+                        const Icon = opt.icon;
+                        const isSelected = cartaTipo === opt.value;
+                        return (
+                          <button
+                            key={opt.value}
+                            onClick={() => setCartaTipo(opt.value as any)}
+                            className={cn(
+                              "p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between",
+                              isSelected
+                                ? "border-rose-500 bg-white dark:bg-gray-900 shadow-sm"
+                                : "border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 hover:border-gray-300 dark:hover:border-gray-700"
+                            )}
+                          >
+                            <div className="flex items-center gap-2 mb-1">
+                              <Icon className={cn("w-4 h-4", isSelected ? "text-rose-500" : "text-gray-400")} />
+                              <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{opt.label}</span>
+                            </div>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{opt.desc}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
+                      Pagadora Asociada (opcional)
+                    </label>
+                    <select
+                      value={cartaPagadora}
+                      onChange={(e) => setCartaPagadora(e.target.value)}
+                      className="input h-[62px]"
+                    >
+                      <option value="">-- General (Cualquier clienta) --</option>
+                      {pagadoras.map((p) => (
+                        <option key={p} value={p}>
+                          {p}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleGenerarCarta}
+                  disabled={generandoCarta}
+                  className="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white py-3.5 text-base shadow-sm font-medium"
+                >
+                  {generandoCarta ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                      Generando cartas únicas con IA...
+                    </>
+                  ) : (
+                    <>
+                      <Heart className="w-5 h-5 mr-2" />
+                      Generar Cartas {cartaTipo === "romantica" ? "Románticas" : "Sexuales"}
+                    </>
+                  )}
+                </Button>
               </div>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {pagadoras.map((nombre) => {
-                  const color = getColorForPagadora(nombre);
-                  return (
-                    <div key={nombre} className="bg-gray-50 rounded-xl p-5 border border-gray-100 hover:shadow-md transition-shadow flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${color}`}>
-                          <Hash className="w-5 h-5 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{nombre}</h3>
-                          <p className="text-xs text-gray-500">Usada en marcadores de historias</p>
-                        </div>
-                      </div>
-                      <Button variant="ghost" size="icon" onClick={() => deletePagadora(nombre)} title="Eliminar" className="text-red-600 hover:bg-red-50">
-                        <Trash2 className="w-4 h-4" />
+
+              {/* Resultado Generado con opción de Guardar para Reutilizar */}
+              {cartaContenido && (
+                <div className="bg-white dark:bg-gray-900 border-2 border-rose-200 dark:border-rose-900/60 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="flex flex-wrap items-center justify-between p-4 bg-rose-50/50 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900/40 gap-3">
+                    <div className="flex items-center gap-2">
+                      <span className="p-1.5 rounded-lg bg-rose-500 text-white">
+                        <Heart className="w-4 h-4" />
+                      </span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-100">
+                        Cartas Recién Generadas
+                      </span>
+                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300 font-medium capitalize">
+                        {cartaTipo}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={openSaveCartaModal}
+                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                      >
+                        <Save className="w-4 h-4 mr-1.5" />
+                        Guardar para Reutilizar
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => handleCopy(cartaContenido)}>
+                        <Copy className="w-4 h-4 mr-1.5" />
+                        Copiar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleGenerarCarta}
+                        disabled={generandoCarta}
+                        title="Generar nueva variación"
+                      >
+                        <RotateCcw className="w-4 h-4" />
                       </Button>
                     </div>
-                  );
-                })}
+                  </div>
+
+                  <div className="p-6 max-h-[50vh] overflow-y-auto">
+                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-sans">
+                      {cartaContenido}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Banco de Cartas Guardadas Reutilizables */}
+              <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                      <Bookmark className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      Banco de Cartas Guardadas (Reutilizables)
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Tus cartas guardadas listas para copiar o enviar a cualquier pagadora
+                    </p>
+                  </div>
+                  <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800">
+                    {cartasGuardadas.length} {cartasGuardadas.length === 1 ? "carta" : "cartas"}
+                  </span>
+                </div>
+
+                {cartasGuardadas.length === 0 ? (
+                  <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                    <Heart className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
+                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Aún no tienes cartas guardadas</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                      Genera cartas arriba y haz clic en "Guardar para Reutilizar" para guardarlas en este banco.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2">
+                    {cartasGuardadas.map((c) => {
+                      const isSexual = c.tipo === "sexual";
+                      return (
+                        <div
+                          key={c.id}
+                          className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-100 dark:border-gray-800 hover:border-purple-200 dark:hover:border-purple-800/60 shadow-sm transition-all flex flex-col justify-between group"
+                        >
+                          <div>
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <span
+                                className={cn(
+                                  "px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider",
+                                  isSexual
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                                    : "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300"
+                                )}
+                              >
+                                {c.tipo}
+                              </span>
+                              {c.pagadora && (
+                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                  <UserPlus className="w-3 h-3 text-purple-500" /> {c.pagadora}
+                                </span>
+                              )}
+                            </div>
+                            <h4 className="font-semibold text-gray-900 dark:text-gray-100 text-sm mb-2">{c.titulo}</h4>
+                            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-4 leading-relaxed mb-4">
+                              {c.contenido}
+                            </p>
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCopy(c.contenido)}
+                              className="flex-1 text-xs"
+                            >
+                              <Copy className="w-3.5 h-3.5 mr-1" /> Copiar
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleCargarCartaEnEditor(c)}
+                              className="flex-1 text-xs text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30"
+                            >
+                              <Edit2 className="w-3.5 h-3.5 mr-1" /> Usar en Editor
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteCartaGuardada(c.id)}
+                              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         )}
 
-        {/* ===== TAB 2: LISTA HISTORIAS ===== */}
-        {activeTab === 'historias' && (
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                <BookOpen className="w-5 h-5 text-purple-600" />
-                Historias Guardadas
-              </h2>
-              <Button onClick={openNewHistoria} className="bg-purple-600 hover:bg-purple-700">
-                <Plus className="w-4 h-4 mr-2" /> Nueva Historia
-              </Button>
+        {/* ============================================================ */}
+        {/* TAB 2: HISTORIAS GUARDADAS */}
+        {/* ============================================================ */}
+        {activeTab === "historias" && (
+          <div className="p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  Historias Guardadas
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Historias completas para enviar progresivamente a tus pagadoras
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  onClick={openNewHistoria}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Plus className="w-4 h-4 mr-2" /> Nueva Historia
+                </Button>
+              </div>
             </div>
 
             {historias.length === 0 ? (
-              <div className="text-center py-12">
-                <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500 mb-4">No hay historias guardadas</p>
-                <Button onClick={openNewHistoria}>Crear primera historia</Button>
+              <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200">No hay historias guardadas</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 mt-1">
+                  Genera una historia con IA o escribe una para asociarle pagadoras y marcadores.
+                </p>
+                <Button onClick={openNewHistoria} className="bg-purple-600 hover:bg-purple-700">
+                  <Sparkles className="w-4 h-4 mr-2" /> Crear primera historia
+                </Button>
               </div>
             ) : (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                 {historias.map((h) => (
-                  <div key={h.id} className="bg-gray-50 rounded-xl p-5 border border-gray-100 hover:shadow-md transition-shadow flex flex-col">
-                    <div className="flex items-start justify-between mb-3">
-                      <span className={cn(
-                        'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
-                        h.tipo === 'romantica' && 'bg-rose-100 text-rose-800',
-                        h.tipo === 'sensual' && 'bg-pink-100 text-pink-800',
-                        h.tipo === 'sexual' && 'bg-red-100 text-red-800',
-                        h.tipo === 'personalizada' && 'bg-purple-100 text-purple-800'
-                      )}>{h.tipo}</span>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" onClick={() => openEditHistoria(h)} title="Editar en editor">
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => deleteHistoria(h.id)} title="Eliminar" className="text-red-600 hover:bg-red-50">
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                  <div
+                    key={h.id}
+                    className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all flex flex-col justify-between"
+                  >
+                    <div>
+                      <div className="flex items-start justify-between mb-3">
+                        <span
+                          className={cn(
+                            "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider",
+                            h.tipo === "romantica" && "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300",
+                            h.tipo === "sensual" && "bg-pink-100 text-pink-800 dark:bg-pink-900/40 dark:text-pink-300",
+                            h.tipo === "sexual" && "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+                            h.tipo === "personalizada" && "bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300"
+                          )}
+                        >
+                          {h.tipo}
+                        </span>
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" onClick={() => openEditHistoria(h)} title="Editar en Estudio">
+                            <Edit2 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => deleteHistoria(h.id)}
+                            className="text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-1">{h.titulo}</h3>
-                    {h.pagadora_asociada && (
-                      <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
-                        <UserPlus className="w-3 h-3" /> {h.pagadora_asociada}
+
+                      <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1.5 line-clamp-1">{h.titulo}</h3>
+                      {h.pagadora_asociada && (
+                        <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mb-2 flex items-center gap-1">
+                          <UserPlus className="w-3.5 h-3.5" /> Pagadora: {h.pagadora_asociada}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-4 leading-relaxed mb-4">
+                        {h.contenido}
                       </p>
-                    )}
-                    <p className="text-sm text-gray-600 line-clamp-3 flex-1 mb-4">{h.contenido}</p>
-                    <div className="flex gap-2 pt-3 border-t border-gray-200">
-                      <Button variant="ghost" size="sm" onClick={() => setViewingHistoria(h)} className="flex-1">
-                        <Eye className="w-4 h-4 mr-1" /> Ver
+                    </div>
+
+                    <div className="flex gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                      <Button variant="outline" size="sm" onClick={() => openEditHistoria(h)} className="flex-1 text-xs">
+                        <Flag className="w-3.5 h-3.5 mr-1 text-purple-600" /> Ver Marcadores
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => handleCopy(h.contenido)} className="flex-1">
-                        <Copy className="w-4 h-4 mr-1" /> Copiar
+                      <Button variant="ghost" size="sm" onClick={() => setViewingHistoria(h)} className="text-xs">
+                        <Eye className="w-3.5 h-3.5 mr-1" /> Leer
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleCopy(h.contenido)} className="text-xs">
+                        <Copy className="w-3.5 h-3.5" />
                       </Button>
                     </div>
                   </div>
@@ -471,192 +759,585 @@ export function PagadorasYHistoriasPage() {
           </div>
         )}
 
-        {/* ===== TAB 3: EDITOR VISUAL CON MARCADORES ===== */}
-        {activeTab === 'editor' && (
-          <div className="p-6">
-            <div className="max-w-4xl mx-auto">
-              {/* Toolbar superior */}
-              <div className="mb-4 flex flex-wrap items-center gap-3 bg-gray-50 rounded-xl p-3 border border-gray-100">
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs font-medium text-gray-500">Tipo:</Label>
-                  <select value={editorTipo} onChange={(e) => setEditorTipo(e.target as any)} className="input w-auto px-3 py-1 text-sm">
-                    {TIPO_HISTORIA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+        {/* ============================================================ */}
+        {/* TAB 3: EDITOR CON MARCADOR VISUAL ARRASTRABLE (DRAG & DROP) */}
+        {/* ============================================================ */}
+        {activeTab === "editor" && (
+          <div className="p-6 max-w-5xl mx-auto space-y-6">
+            {/* Header del Editor */}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-gray-50/80 dark:bg-gray-800/80 rounded-2xl p-4 border border-gray-100 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div>
+                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Tipo de historia</Label>
+                  <select
+                    value={editorTipo}
+                    onChange={(e) => setEditorTipo(e.target.value as any)}
+                    className="input h-9 py-1 px-3 text-xs w-auto mt-0.5"
+                  >
+                    {TIPO_HISTORIA_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
-                <div className="w-px h-6 bg-gray-200 mx-2" />
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs font-medium text-gray-500">Pagadora asociada:</Label>
-                  <select value={editorPagadoraAsociada} onChange={(e) => setEditorPagadoraAsociada(e.target.value)} className="input w-auto px-3 py-1 text-sm">
-                    <option value="">-- Ninguna --</option>
-                    {pagadoras.map((p: string) => <option key={p} value={p}>{p}</option>)}
+                <div>
+                  <Label className="text-xs font-semibold text-gray-500 dark:text-gray-400">Pagadora Principal</Label>
+                  <select
+                    value={editorPagadoraAsociada}
+                    onChange={(e) => setEditorPagadoraAsociada(e.target.value)}
+                    className="input h-9 py-1 px-3 text-xs w-auto mt-0.5"
+                  >
+                    <option value="">-- General / Todas --</option>
+                    {pagadoras.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
                   </select>
                 </div>
-                <div className="w-px h-6 bg-gray-200 mx-2" />
-                <div className="flex-1" />
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span className="px-2 py-1 bg-purple-100 text-purple-700 rounded">Click en texto → Insertar marcador</span>
-                  <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded">Marcadores: {marcadores.length}</span>
-                </div>
-                <Button variant="secondary" onClick={() => { setShowEditor(false); setActiveTab('historias'); }} className="ml-2">
-                  <ChevronUp className="w-4 h-4 mr-1" /> Volver
-                </Button>
-                <Button onClick={saveHistoria} disabled={generatingHistoria} className="bg-purple-600 hover:bg-purple-700">
-                  {generatingHistoria ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
-                  {editingHistoria ? 'Actualizar' : 'Guardar Historia'}
-                </Button>
               </div>
 
-              {/* Título */}
-              <Input
-                value={editorTitulo}
-                onChange={(e) => setEditorTitulo(e.target.value)}
-                placeholder="Título de la historia (ej: Noche de reencuentro en París)"
-                className="mb-4 text-lg font-medium"
-              />
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setActiveTab("historias")}>
+                  Volver a lista
+                </Button>
+                <Button
+                  onClick={saveHistoria}
+                  disabled={savingHistoria}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  {savingHistoria ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : (
+                    <Save className="w-4 h-4 mr-2" />
+                  )}
+                  {editingHistoria ? "Actualizar Historia" : "Guardar Historia"}
+                </Button>
+              </div>
+            </div>
 
-              {/* Área de texto con marcadores inline */}
-              <div className="relative">
-                <Textarea
-                  ref={textareaRef}
-                  value={editorContent}
-                  onChange={(e) => setEditorContent(e.target.value)}
-                  rows={25}
-                  placeholder="Escribe tu historia aquí... Click en cualquier posición y usa los botones de abajo para insertar marcadores de pagadoras."
-                  className="font-mono text-sm leading-relaxed bg-white border-gray-200 focus:border-purple-400 focus:ring-purple-400"
-                />
-                
-                {/* Marcadores visuales overlay */}
-                {marcadores.length > 0 && (
-                  <div className="absolute bottom-2 right-2 bg-white/95 backdrop-blur rounded-lg p-2 border border-gray-200 shadow-lg max-h-40 overflow-y-auto">
-                    <p className="text-xs font-semibold text-gray-700 mb-2 flex items-center gap-1">
-                      <Flag className="w-3 h-3" /> Marcadores en esta historia
-                    </p>
-                    <div className="space-y-1 max-w-xs">
-                      {marcadores.map((m) => (
-                        <div key={m.id} className="flex items-center gap-2 p-1.5 bg-gray-50 rounded text-xs hover:bg-gray-100 cursor-pointer" onClick={() => handleMarcadorClick(m)}>
-                          <span className={`w-2 h-2 rounded-full ${m.color}`} />
-                          <span className="font-medium text-gray-800 truncate max-w-[120px]">{m.pagadora}</span>
-                          <span className="text-gray-500 truncate max-w-[100px]">{m.nota}</span>
-                          <button onClick={(e) => { e.stopPropagation(); removeMarcador(m.id); }} className="text-red-500 hover:text-red-700 p-0.5" title="Eliminar">
-                            <Minus className="w-3 h-3" />
-                          </button>
+            <Input
+              value={editorTitulo}
+              onChange={(e) => setEditorTitulo(e.target.value)}
+              placeholder="Título de la historia (Ej: Una noche inolvidable en la ciudad...)"
+              className="text-lg font-semibold"
+            />
+
+            {/* SECCIÓN INTERACTIVA DE MARCADOR VISUAL ARRASTRABLE */}
+            <div className="bg-gradient-to-br from-purple-50/60 to-indigo-50/60 dark:from-purple-950/20 dark:to-indigo-950/20 rounded-2xl p-5 border border-purple-100 dark:border-purple-900/50 shadow-sm space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <Flag className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                    Línea de Tiempo Visual: ¿En qué parte de la historia va cada pagadora?
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Arrastra el marcador de cada pagadora o usa los botones para situarla exactamente donde va
+                  </p>
+                </div>
+
+                {pagadoras.length === 0 && (
+                  <Button size="sm" variant="outline" onClick={openPagadoraModal} className="text-xs">
+                    <UserPlus className="w-3.5 h-3.5 mr-1" /> Crear Pagadora
+                  </Button>
+                )}
+              </div>
+
+              {/* BARRA DE PROGRESO INTERACTIVA */}
+              {parrafos.length > 0 && pagadoras.length > 0 && (
+                <div className="space-y-3 bg-white dark:bg-gray-900 p-4 rounded-xl border border-purple-100/80 dark:border-purple-900/40">
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>Inicio (Párrafo 1)</span>
+                    <span className="font-semibold text-purple-600 dark:text-purple-400">
+                      Progreso de Lectura ({parrafos.length} {parrafos.length === 1 ? "párrafo" : "párrafos"})
+                    </span>
+                    <span>Final (Párrafo {parrafos.length})</span>
+                  </div>
+
+                  {/* Pistas / Sliders para cada pagadora */}
+                  <div className="space-y-3 pt-2">
+                    {pagadoras.map((pag) => {
+                      const color = getColorForPagadora(pag);
+                      const currentPIdx = posicionesPagadoras[pag] ?? 0;
+                      const pct = parrafos.length > 1 ? (currentPIdx / (parrafos.length - 1)) * 100 : 100;
+
+                      return (
+                        <div key={pag} className="flex flex-col gap-1.5 p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                          <div className="flex items-center justify-between text-xs">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={cn(
+                                  "w-6 h-6 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-sm",
+                                  color.bg
+                                )}
+                              >
+                                {pag.charAt(0).toUpperCase()}
+                              </span>
+                              <span className="font-bold text-gray-800 dark:text-gray-200">{pag}</span>
+                            </div>
+                            <span className="text-xs font-semibold px-2 py-0.5 rounded bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300">
+                              📍 Párrafo {currentPIdx + 1} de {parrafos.length} ({Math.round(pct)}%)
+                            </span>
+                          </div>
+
+                          {/* Control deslizante / arrastrable visual */}
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="range"
+                              min={0}
+                              max={Math.max(0, parrafos.length - 1)}
+                              step={1}
+                              value={currentPIdx}
+                              onChange={(e) => updatePagadoraPosition(pag, parseInt(e.target.value, 10))}
+                              className="w-full accent-purple-600 dark:accent-purple-400 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                            />
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Botones rápidos de pagadoras para insertar o saltar */}
+              {pagadoras.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                    Marcadores disponibles:
+                  </span>
+                  {pagadoras.map((p) => {
+                    const color = getColorForPagadora(p);
+                    const pos = posicionesPagadoras[p] ?? 0;
+                    return (
+                      <div
+                        key={p}
+                        draggable
+                        onDragStart={() => setDraggingPagadora(p)}
+                        onDragEnd={() => setDraggingPagadora(null)}
+                        className={cn(
+                          "cursor-grab active:cursor-grabbing px-3 py-1.5 rounded-xl border flex items-center gap-2 text-xs font-medium transition-all shadow-sm select-none",
+                          color.light,
+                          color.border
+                        )}
+                        title="Arrastra este marcador sobre cualquier párrafo"
+                      >
+                        <span className={cn("w-2.5 h-2.5 rounded-full", color.bg)} />
+                        <span className="font-semibold text-gray-800 dark:text-gray-200">{p}</span>
+                        <span className="text-[10px] text-gray-400">P{pos + 1}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* VISTA DUAL: PÁRRAFOS VISUALES CON DROP TARGETS + TEXTAREA */}
+            <div className="grid lg:grid-cols-2 gap-6">
+              {/* Columna Izquierda: Vista interactiva de bloques donde se ve y se arrastra a las pagadoras */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    Fragmentos de la Historia (Arrastra aquí las pagadoras)
+                  </Label>
+                  <span className="text-xs text-gray-400">
+                    {parrafos.length} {parrafos.length === 1 ? "bloque" : "bloques"}
+                  </span>
+                </div>
+
+                {parrafos.length === 0 ? (
+                  <div className="p-8 text-center bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
+                    <FileText className="w-8 h-8 text-gray-300 dark:text-gray-600 mx-auto mb-2" />
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Escribe tu historia en el editor de la derecha (separa párrafos con enter).
+                      Aquí verás los bloques interactivos para ubicar a tus pagadoras.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
+                    {parrafos.map((p, idx) => {
+                      // Pagadoras que están en este párrafo
+                      const pagadorasAqui = pagadoras.filter(
+                        (pag) => (posicionesPagadoras[pag] ?? 0) === idx
+                      );
+
+                      return (
+                        <div
+                          key={idx}
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                          }}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            if (draggingPagadora) {
+                              updatePagadoraPosition(draggingPagadora, idx);
+                              setDraggingPagadora(null);
+                            }
+                          }}
+                          onClick={() => {
+                            // Si se hace click y hay una pagadora seleccionada, moverla aquí
+                            if (editorPagadoraAsociada) {
+                              updatePagadoraPosition(editorPagadoraAsociada, idx);
+                            }
+                          }}
+                          className={cn(
+                            "p-4 rounded-xl border transition-all text-xs leading-relaxed relative group cursor-pointer",
+                            pagadorasAqui.length > 0
+                              ? "bg-purple-50/70 dark:bg-purple-950/30 border-purple-300 dark:border-purple-800 shadow-sm"
+                              : "bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 hover:border-gray-300 dark:hover:border-gray-700"
+                          )}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider text-[10px]">
+                              Párrafo #{idx + 1}
+                            </span>
+
+                            {/* Insignias de pagadoras que están en este párrafo */}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              {pagadorasAqui.map((pag) => {
+                                const color = getColorForPagadora(pag);
+                                return (
+                                  <span
+                                    key={pag}
+                                    className={cn(
+                                      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold text-white shadow-xs",
+                                      color.bg
+                                    )}
+                                  >
+                                    <Flag className="w-2.5 h-2.5" />
+                                    {pag} está aquí
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          <p className="text-gray-700 dark:text-gray-300 line-clamp-3">{p}</p>
+
+                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800/80 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span className="text-[10px] text-gray-400">
+                              Haz clic o suelta aquí para marcar posición
+                            </span>
+                            <div className="flex gap-1">
+                              {pagadoras.map((pag) => (
+                                <button
+                                  key={pag}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    updatePagadoraPosition(pag, idx);
+                                  }}
+                                  className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-gray-600 dark:text-gray-300 font-medium"
+                                >
+                                  Mover {pag}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
 
-              {/* Panel de inserción de marcadores */}
-              {pagadoras.length > 0 && (
-                <div className="mt-4 p-4 bg-purple-50 border border-purple-100 rounded-xl">
-                  <p className="text-sm font-medium text-purple-800 mb-3 flex items-center gap-2">
-                    <Bookmark className="w-4 h-4" /> Insertar marcador en posición del cursor
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {pagadoras.map((p) => {
-                      const color = getColorForPagadora(p);
-                      return (
-                        <Button
-                          key={p}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => insertMarcador(p, '')}
-                          className={`border-2 ${color.replace('500', '200')} text-gray-700 hover:bg-white`}
-                          style={{ borderColor: color }}
-                        >
-                          <BookmarkCheck className={`w-3 h-3 mr-1 ${color}`} />
-                          {p}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                  <p className="text-xs text-purple-600 mt-2">
-                    Haz click en el texto donde quieras el marcador, luego pulsa el botón de la pagadora.
-                    Podrás editar la nota del marcador clickando en la lista de la derecha.
-                  </p>
+              {/* Columna Derecha: Textarea editable */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                    Contenido editable de la Historia
+                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleCopy(editorContent)}
+                    className="text-xs h-7"
+                  >
+                    <Copy className="w-3 h-3 mr-1" /> Copiar todo
+                  </Button>
                 </div>
-              )}
+
+                <Textarea
+                  value={editorContent}
+                  onChange={(e) => setEditorContent(e.target.value)}
+                  rows={20}
+                  placeholder="Escribe o pega tu historia aquí... Separa párrafos con doble enter para generar bloques visuales con marcadores."
+                  className="font-mono text-xs leading-relaxed bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 focus:border-purple-500 rounded-xl"
+                />
+              </div>
             </div>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 4: GESTIÓN DE PAGADORAS */}
+        {/* ============================================================ */}
+        {activeTab === "pagadoras" && (
+          <div className="p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <UserPlus className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                  Lista de Pagadoras
+                </h2>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Clientas a las que les envías cartas y llevas seguimiento de historias
+                </p>
+              </div>
+              <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700 text-white">
+                <Plus className="w-4 h-4 mr-2" /> Nueva Pagadora
+              </Button>
+            </div>
+
+            {pagadoras.length === 0 ? (
+              <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+                <UserPlus className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+                <h3 className="font-semibold text-gray-800 dark:text-gray-200">No hay pagadoras registradas</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 mt-1">
+                  Agrega a tus clientas para asociarles cartas e historias con marcadores visuales.
+                </p>
+                <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700">
+                  <Plus className="w-4 h-4 mr-2" /> Agregar primera pagadora
+                </Button>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {pagadoras.map((nombre) => {
+                  const color = getColorForPagadora(nombre);
+                  const marcador = pagadorasMarcadores.find((m) => m.nombre_pagadora === nombre);
+                  const posP = posicionesPagadoras[nombre];
+
+                  return (
+                    <div
+                      key={nombre}
+                      className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div
+                          className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-sm",
+                            color.bg
+                          )}
+                        >
+                          {nombre.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{nombre}</h3>
+                          <div className="flex flex-col gap-0.5 mt-1">
+                            {typeof posP === "number" && (
+                              <span className="text-xs font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                                <Flag className="w-3 h-3" /> Párrafo #{posP + 1} de la historia
+                              </span>
+                            )}
+                            {marcador && (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                                Última carta #{marcador.ultima_carta_numero}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deletePagadora(nombre)}
+                        className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
 
-      {/* Modals (outside tabs) */}
-      {/* Modal Nueva Pagadora */}
+      {/* ============================================================ */}
+      {/* MODAL: GUARDAR CARTA PARA REUTILIZAR */}
+      {/* ============================================================ */}
+      <Modal
+        isOpen={showSaveCartaModal}
+        onClose={() => setShowSaveCartaModal(false)}
+        title="Guardar Carta para Reutilizar"
+        size="md"
+      >
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Esta carta se guardará en tu banco de cartas. Podrás copiarla, reutilizarla o cargarla en el editor de historias cuando la necesites.
+          </p>
+
+          <div>
+            <Label htmlFor="carta_save_titulo">Título / Identificador *</Label>
+            <Input
+              id="carta_save_titulo"
+              value={saveCartaTitulo}
+              onChange={(e) => setSaveCartaTitulo(e.target.value)}
+              placeholder="Ej: Carta romántica para cuando se ausenta..."
+              required
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="carta_save_pagadora">Asignar a pagadora (opcional)</Label>
+            <select
+              id="carta_save_pagadora"
+              value={saveCartaPagadora}
+              onChange={(e) => setSaveCartaPagadora(e.target.value)}
+              className="input"
+            >
+              <option value="">-- General (Cualquier clienta) --</option>
+              {pagadoras.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+            <Button variant="secondary" onClick={() => setShowSaveCartaModal(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveCarta} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white">
+              Guardar Carta
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* ============================================================ */}
+      {/* MODAL: NUEVA PAGADORA */}
+      {/* ============================================================ */}
       <Modal isOpen={showPagadoraModal} onClose={() => setShowPagadoraModal(false)} title="Nueva Pagadora" size="sm">
-        <form onSubmit={(e) => { e.preventDefault(); createPagadora(); }} className="space-y-4">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            createPagadora();
+          }}
+          className="space-y-4"
+        >
           <div>
             <Label htmlFor="pagadora_nombre">Nombre de la pagadora *</Label>
-            <Input id="pagadora_nombre" value={newPagadoraName} onChange={(e) => setNewPagadoraName(e.target.value)} placeholder="Ej: María, Cliente VIP, Ana..." required autoFocus />
+            <Input
+              id="pagadora_nombre"
+              value={newPagadoraName}
+              onChange={(e) => setNewPagadoraName(e.target.value)}
+              placeholder="Ej: Laura, Andrea, Clienta VIP..."
+              required
+              autoFocus
+            />
           </div>
-          <p className="text-xs text-gray-500">Solo nombre. Los marcadores se agregan visualmente en el editor de historias.</p>
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="secondary" onClick={() => setShowPagadoraModal(false)} className="flex-1">Cancelar</Button>
-            <Button type="submit" className="flex-1 bg-purple-600 hover:bg-purple-700">Crear</Button>
+          <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <Button type="button" variant="secondary" onClick={() => setShowPagadoraModal(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button type="submit" className="flex-1 bg-purple-600 hover:bg-purple-700 text-white">
+              Crear Pagadora
+            </Button>
           </div>
         </form>
       </Modal>
 
-      {/* Modal Ver Historia Completa */}
-      <Modal isOpen={!!viewingHistoria} onClose={() => setViewingHistoria(null)} title={viewingHistoria?.titulo || 'Historia Completa'} size="lg">
+      {/* ============================================================ */}
+      {/* MODAL: VER HISTORIA COMPLETA */}
+      {/* ============================================================ */}
+      <Modal
+        isOpen={!!viewingHistoria}
+        onClose={() => setViewingHistoria(null)}
+        title={viewingHistoria?.titulo || "Historia Completa"}
+        size="lg"
+      >
         {viewingHistoria && (
           <div className="space-y-4">
-            <div className="flex items-center gap-3 text-sm text-gray-500">
-              <span className={cn(
-                'inline-flex items-center px-2 py-1 rounded-full text-xs font-medium',
-                viewingHistoria.tipo === 'romantica' && 'bg-rose-100 text-rose-800',
-                viewingHistoria.tipo === 'sensual' && 'bg-pink-100 text-pink-800',
-                viewingHistoria.tipo === 'sexual' && 'bg-red-100 text-red-800',
-                viewingHistoria.tipo === 'personalizada' && 'bg-purple-100 text-purple-800'
-              )}>{viewingHistoria.tipo}</span>
-              {viewingHistoria.pagadora_asociada && <span>👤 {viewingHistoria.pagadora_asociada}</span>}
-            </div>
-            <div className="bg-gray-50 p-5 rounded-lg border border-gray-100 max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-gray-800 leading-relaxed font-mono text-sm">
+            <div className="bg-gray-50 dark:bg-gray-800 p-5 rounded-xl border border-gray-100 dark:border-gray-700 max-h-[60vh] overflow-y-auto whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-relaxed text-sm font-sans">
               {viewingHistoria.contenido}
             </div>
-            <div className="flex gap-3 pt-4 border-t border-gray-100">
+            <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
               <Button onClick={() => handleCopy(viewingHistoria.contenido)} className="flex-1">
                 <Copy className="w-4 h-4 mr-2" /> Copiar todo
               </Button>
-              <Button variant="secondary" onClick={() => setViewingHistoria(null)} className="flex-1">Cerrar</Button>
+              <Button variant="secondary" onClick={() => setViewingHistoria(null)} className="flex-1">
+                Cerrar
+              </Button>
             </div>
           </div>
         )}
       </Modal>
 
-      {/* Modal Generador IA para Nueva Historia */}
-      <Modal isOpen={showAIGenerator} onClose={() => setShowAIGenerator(false)} title="Generar Historia con IA" size="lg">
+      {/* ============================================================ */}
+      {/* MODAL: GENERAR HISTORIA CON IA */}
+      {/* ============================================================ */}
+      <Modal
+        isOpen={showAIGenerator}
+        onClose={() => setShowAIGenerator(false)}
+        title="Generar Historia con IA"
+        size="md"
+      >
         <div className="space-y-4">
-          <p className="text-sm text-gray-500">La IA genera la historia completa. Luego podrás editarla y agregar marcadores de pagadoras visualmente.</p>
-          
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            La IA generará una narrativa completa estructurada en párrafos. Luego podrás verla en el Estudio y arrastrar marcadores de pagadoras.
+          </p>
+
           <div>
             <Label>Tipo de historia</Label>
-            <select value={editorTipo} onChange={(e) => setEditorTipo(e.target as any)} className="input">
-              {TIPO_HISTORIA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label} - {o.desc}</option>)}
-            </select>
-          </div>
-          
-          <div>
-            <Label htmlFor="ai_tema">Título / Tema *</Label>
-            <Input id="ai_tema" value={editorTitulo} onChange={(e) => setEditorTitulo(e.target.value)} placeholder="Ej: Reencuentro en París después de años / Noche de pasión en hotel / Fantasía específica..." required autoFocus />
-          </div>
-          
-          <div>
-            <Label htmlFor="ai_pagadora">Asociar a pagadora (opcional)</Label>
-            <select id="ai_pagadora" value={editorPagadoraAsociada} onChange={(e) => setEditorPagadoraAsociada(e.target.value)} className="input">
-              <option value="">-- Sin pagadora (historia genérica) --</option>
-              {pagadoras.map((p: string) => <option key={p} value={p}>{p}</option>)}
+            <select
+              value={editorTipo}
+              onChange={(e) => setEditorTipo(e.target.value as any)}
+              className="input"
+            >
+              {TIPO_HISTORIA_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
             </select>
           </div>
 
-          <div className="flex gap-3 pt-4 border-t border-gray-100">
-            <Button variant="secondary" onClick={() => setShowAIGenerator(false)} className="flex-1">Cancelar</Button>
-            <Button onClick={handleAIGenerate} disabled={generatingAI || !editorTitulo.trim()} className="flex-1 bg-purple-600 hover:bg-purple-700">
+          <div>
+            <Label htmlFor="ai_tema">Tema o Título *</Label>
+            <Input
+              id="ai_tema"
+              value={editorTitulo}
+              onChange={(e) => setEditorTitulo(e.target.value)}
+              placeholder="Ej: Encuentro a solas / Fantasía compartida / Tarde de lluvia..."
+              required
+              autoFocus
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="ai_pagadora">Asociar a pagadora (opcional)</Label>
+            <select
+              id="ai_pagadora"
+              value={editorPagadoraAsociada}
+              onChange={(e) => setEditorPagadoraAsociada(e.target.value)}
+              className="input"
+            >
+              <option value="">-- Sin pagadora (General) --</option>
+              {pagadoras.map((p) => (
+                <option key={p} value={p}>
+                  {p}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <Button variant="secondary" onClick={() => setShowAIGenerator(false)} className="flex-1">
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleAIGenerateHistoria}
+              disabled={generatingAI || !editorTitulo.trim()}
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+            >
               {generatingAI ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Generando con IA...
+                  Generando...
                 </>
               ) : (
                 <>

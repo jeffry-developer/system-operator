@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Sparkles, Eye, EyeOff, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { useToast } from '../components/Toast';
 import { Button } from '../components/Button';
 import { Input, Label } from '../components/Input';
@@ -14,6 +15,7 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { login } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const { error: showError } = useToast();
   const navigate = useNavigate();
 
@@ -43,17 +45,25 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4 transition-colors relative">
+      <button
+        onClick={toggleTheme}
+        title={isDark ? 'Modo claro' : 'Modo oscuro'}
+        className="absolute top-5 right-5 p-2.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors shadow-sm"
+      >
+        {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+      </button>
+
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center gap-2 mb-6">
             <div className="w-12 h-12 rounded-xl bg-primary-600 flex items-center justify-center">
               <Sparkles className="w-7 h-7 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">System Operator</span>
+            <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">System Operator</span>
           </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Iniciar sesión</h1>
-          <p className="mt-2 text-gray-600">Accede a tu cuenta para continuar</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">Iniciar sesión</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Accede a tu cuenta para continuar</p>
         </div>
 
         <div className="card p-6">
@@ -102,9 +112,9 @@ export function LoginPage() {
             </Button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-600">
+          <p className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
             ¿No tienes cuenta?{' '}
-            <Link to="/register" className="text-primary-600 hover:text-primary-500 font-medium">
+            <Link to="/register" className="text-primary-600 dark:text-primary-400 hover:text-primary-500 font-medium">
               Regístrate
             </Link>
           </p>

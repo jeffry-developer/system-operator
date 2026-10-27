@@ -41,6 +41,16 @@ export interface CartaPagadora {
   fecha_actualizacion: string;
 }
 
+export interface CartaGuardada {
+  id: string;
+  perfil_id: string;
+  titulo: string;
+  tipo: 'romantica' | 'sexual';
+  contenido: string;
+  pagadora?: string;
+  fecha_creacion: string;
+}
+
 export interface HistoriaGuardada {
   id: string;
   perfil_id: string;

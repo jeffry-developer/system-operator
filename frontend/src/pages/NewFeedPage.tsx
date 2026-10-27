@@ -10,10 +10,10 @@ import { copyToClipboard } from '../utils/helpers';
 const NEW_FEED_TIPOS: TipoMensaje[] = ['posts', 'respuestas_rapidas', 'insistencia', 'saludo'];
 
 const FEED_META: Record<string, { label: string; color: string; bg: string; border: string; Icon: any }> = {
-  posts: { label: 'Ideas de Posts', color: 'text-purple-600', bg: 'bg-purple-50', border: 'border-purple-100', Icon: Layout },
-  respuestas_rapidas: { label: 'Respuestas Rapidas', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100', Icon: Zap },
-  insistencia: { label: 'Mensajes de Insistencia', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', Icon: MessageCircle },
-  saludo: { label: 'Saludo', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-100', Icon: MessageSquare },
+  posts: { label: 'Ideas de Posts', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-100 dark:border-purple-900/40', Icon: Layout },
+  respuestas_rapidas: { label: 'Respuestas Rápidas', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-100 dark:border-blue-900/40', Icon: Zap },
+  insistencia: { label: 'Mensajes de Insistencia', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-100 dark:border-amber-900/40', Icon: MessageCircle },
+  saludo: { label: 'Saludo', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-100 dark:border-green-900/40', Icon: MessageSquare },
 };
 
 export function NewFeedPage() {
@@ -78,8 +78,8 @@ export function NewFeedPage() {
   if (perfiles.length === 0) return (
     <div className="card p-12 text-center">
       <Sparkles className="w-16 h-16 text-primary-400 mx-auto mb-6 animate-pulse" />
-      <h3 className="text-2xl font-bold text-gray-900 mb-2">Sin perfiles</h3>
-      <p className="text-gray-500">Crea un perfil primero.</p>
+      <h3 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2">Sin perfiles</h3>
+      <p className="text-gray-500 dark:text-gray-400">Crea un perfil primero.</p>
     </div>
   );
 
@@ -87,13 +87,13 @@ export function NewFeedPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-gray-900 p-6 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-800">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-            <div className="p-2 bg-purple-100 rounded-lg"><Layout className="w-5 h-5 text-purple-600" /></div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-2">
+            <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg"><Layout className="w-5 h-5 text-purple-600 dark:text-purple-400" /></div>
             New Feed
           </h1>
-          <p className="text-gray-500">Posts, respuestas, insistencia y saludos por perfil.</p>
+          <p className="text-gray-500 dark:text-gray-400">Posts, respuestas, insistencia y saludos por perfil.</p>
         </div>
         <div className="flex items-end gap-3">
           <div className="flex flex-col">
@@ -119,11 +119,11 @@ export function NewFeedPage() {
           const textoDisplay = tipo === 'posts' ? cleanText(contenido) : contenido;
 
           return (
-            <div key={tipo} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div key={tipo} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
               <div className={`p-4 border-b ${meta.bg} ${meta.border} flex items-center justify-between`}>
                 <div className="flex items-center gap-2">
                   <Icon className={`w-5 h-5 ${meta.color}`} />
-                  <span className="font-semibold text-gray-800">{meta.label}</span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-100">{meta.label}</span>
                 </div>
                 <div className="flex gap-2">
                   {contenido && (
@@ -139,17 +139,17 @@ export function NewFeedPage() {
               <div className="p-5">
                 {isLoading ? (
                   <div className="space-y-2">
-                    <div className="h-3 bg-gray-100 rounded animate-pulse w-3/4" />
-                    <div className="h-3 bg-gray-100 rounded animate-pulse w-full" />
-                    <div className="h-3 bg-gray-100 rounded animate-pulse w-5/6" />
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-3/4" />
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-full" />
+                    <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-5/6" />
                   </div>
                 ) : textoDisplay ? (
                   <div className="space-y-4">
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{textoDisplay}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{textoDisplay}</p>
                     {imageUrls.length > 0 && (
-                      <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-100">
+                      <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                         {imageUrls.map((url, i) => (
-                          <div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 shadow-sm">
+                          <div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
                             <img src={url} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
                             <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
                               <span className="text-white text-xs font-semibold">Post {i + 1}</span>
@@ -165,7 +165,7 @@ export function NewFeedPage() {
                 ) : (
                   <div className="flex flex-col items-center py-8 text-center">
                     <Icon className={`w-10 h-10 ${meta.color} opacity-20 mb-3`} />
-                    <p className="text-gray-400 mb-4">Sin contenido generado</p>
+                    <p className="text-gray-400 dark:text-gray-500 mb-4">Sin contenido generado</p>
                     <Button variant="outline" size="sm" onClick={() => handleGenerate([tipo], tipo)} disabled={isLoading}>
                       <Sparkles className="w-3 h-3 mr-2" />Generar ahora
                     </Button>

@@ -1,12 +1,14 @@
-import { ReactNode } from 'react';
+﻿import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../utils/helpers';
-import { Menu, X, LogOut, User, Settings, Image, FileText, Layout as LayoutIcon, Heart, Sparkles, BookOpen, Hash } from 'lucide-react';
+import { Menu, X, LogOut, User, Settings, Image, FileText, Layout as LayoutIcon, Sparkles, BookOpen, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import { Button } from './Button';
 
 export function Layout() {
   const { user, logout } = useAuth();
+  const { isDark, toggleTheme } = useTheme();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -14,13 +16,12 @@ export function Layout() {
     { path: '/perfiles', label: 'Perfiles', icon: User },
     { path: '/plan-trabajo', label: 'Plan de Trabajo', icon: FileText },
     { path: '/new-feed', label: 'New Feed', icon: LayoutIcon },
-    { path: '/cartas-dinamicas', label: 'Cartas y Dinámicas', icon: Heart },
-    { path: '/pagadoras-historias', label: 'Pagadoras e Historias', icon: BookOpen },
+    { path: '/estudio', label: 'Estudio (Cartas & Historias)', icon: BookOpen },
     { path: '/imagenes', label: 'Imágenes', icon: Image },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -32,22 +33,22 @@ export function Layout() {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed top-0 left-0 z-50 h-screen w-64 bg-white border-r border-gray-200 transform transition-transform duration-200 lg:translate-x-0',
+          'fixed top-0 left-0 z-50 h-screen w-64 bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800 transform transition-transform duration-200 lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
+          <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-800">
             <Link to="/perfiles" className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-primary-600 flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="font-semibold text-gray-900">System Operator</span>
+              <span className="font-semibold text-gray-900 dark:text-gray-100">System Operator</span>
             </Link>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="lg:hidden p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              className="lg:hidden p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <X className="w-5 h-5" />
             </button>
@@ -65,8 +66,8 @@ export function Layout() {
                   className={cn(
                     'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
                     isActive
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100'
                   )}
                   onClick={() => setSidebarOpen(false)}
                 >
@@ -78,19 +79,27 @@ export function Layout() {
           </nav>
 
           {/* User section */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-4 border-t border-gray-200 dark:border-gray-800">
             <div className="flex items-center gap-3 px-3 py-2">
-              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center">
-                <span className="text-sm font-medium text-primary-700">
+              <div className="w-8 h-8 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center">
+                <span className="text-sm font-medium text-primary-700 dark:text-primary-300">
                   {user?.nombre?.charAt(0).toUpperCase() || 'U'}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{user?.nombre}</p>
-                <p className="text-xs text-gray-500 truncate">{user?.email}</p>
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{user?.nombre}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{user?.email}</p>
               </div>
             </div>
             <div className="flex gap-2 mt-3">
+              {/* Dark mode toggle */}
+              <button
+                onClick={toggleTheme}
+                title={isDark ? 'Modo claro' : 'Modo oscuro'}
+                className="p-2 rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
+              >
+                {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
               <Link to="/configuracion" className="flex-1" onClick={() => setSidebarOpen(false)}>
                 <Button variant="ghost" size="sm" className="w-full">
                   <Settings className="w-4 h-4 mr-1" />
@@ -109,16 +118,21 @@ export function Layout() {
       {/* Main content */}
       <div className="lg:pl-64">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 h-16 bg-white border-b border-gray-200 lg:hidden">
+        <header className="sticky top-0 z-30 h-16 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 lg:hidden">
           <div className="flex items-center justify-between h-full px-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <span className="font-semibold text-gray-900">System Operator</span>
-            <div className="w-10" />
+            <span className="font-semibold text-gray-900 dark:text-gray-100">System Operator</span>
+            <button
+              onClick={toggleTheme}
+              className="p-1 rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            </button>
           </div>
         </header>
 
@@ -129,5 +143,3 @@ export function Layout() {
     </div>
   );
 }
-
-import { useState } from 'react';

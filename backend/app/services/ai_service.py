@@ -18,7 +18,7 @@ class AIService:
         else:
             raise ValueError(f"No API key configured for provider: {self.provider}")
 
-    def generar_mensajes(self, prompt_personalidad: str, tipos: List[TipoMensaje]) -> Dict[str, str]:
+    def generar_mensajes(self, prompt_personalidad: str, tipos: List[TipoMensaje], ultimos_mensajes: Dict[str, str] = None) -> Dict[str, str]:
         """Genera mensajes basados en el prompt de personalidad del perfil"""
 
         system_prompt = self._construir_system_prompt(prompt_personalidad)
@@ -26,10 +26,51 @@ class AIService:
         mensajes = {}
         for tipo in tipos:
             prompt = self._construir_prompt_tipo(tipo, prompt_personalidad)
+            
+            # Añadir historial previo para evitar repetición
+            if ultimos_mensajes and tipo.value in ultimos_mensajes:
+                anterior = ultimos_mensajes[tipo.value][:500]  # máx 500 chars del anterior
+                prompt = f"IMPORTANTE: El siguiente contenido fue generado anteriormente. NO lo repitas ni uses las mismas frases o ideas:\n---\n{anterior}\n---\n\n{prompt}"
+            
             contenido = self._llamar_ia(system_prompt, prompt)
-            mensajes[tipo.value] = contenido.strip()
+            mensajes[tipo.value] = self._sanitizar_texto(contenido.strip())
 
         return mensajes
+
+    def _sanitizar_texto(self, texto: str) -> str:
+        if not texto:
+            return ""
+        import re
+        
+        # 1. Reemplazar frases prohibidas estrictamente
+        res = texto
+        res = re.sub(r'(?i)\bsin\s+prisas?\b', 'con tranquilidad', res)
+        res = re.sub(r'(?i)\ba\s*veces\b', 'de vez en cuando', res)
+        res = re.sub(r'(?i)\bpoco\s+a\s+poco\b', 'a su tiempo', res)
+        
+        # 2. Limpiar formatos "Etiqueta: texto" típicos de IA
+        lineas = res.split('\n')
+        lineas_limpias = []
+        patron_etiqueta = re.compile(
+            r'^(?:Tema(?:\s+de\s+hoy)?|Reflexi[oó]n|Pregunta|Texto|Mensaje|Idea|Consejo|Contexto|Nota|Etiqueta|T[ií]tulo|Respuesta|Opci[oó]n|Icebreaker|Post\s*\d*)\s*:\s*',
+            re.IGNORECASE
+        )
+        for linea in lineas:
+            # Si una línea empieza con numeración/emoji y luego etiqueta (ej: "1. 🤝 Pregunta: ...")
+            linea_sub = re.sub(
+                r'^(\d+\.\s*(?:[^\w\s]\s*)?)(?:Tema(?:\s+de\s+hoy)?|Reflexi[oó]n|Pregunta|Texto|Mensaje|Idea|Consejo|Contexto|Nota|Etiqueta|T[ií]tulo|Respuesta|Opci[oó]n|Icebreaker)\s*:\s*',
+                r'\1',
+                linea,
+                flags=re.IGNORECASE
+            )
+            # Limpiar etiqueta al inicio de la línea
+            linea_sub = patron_etiqueta.sub('', linea_sub)
+            lineas_limpias.append(linea_sub)
+            
+        res = '\n'.join(lineas_limpias)
+        # Doble verificación final
+        res = re.sub(r'(?i)\bsin\s+prisas?\b', 'con tranquilidad', res)
+        return res
 
     def _construir_system_prompt(self, prompt_personalidad: str) -> str:
         return f"""Eres un asistente especializado en generar mensajes de texto para perfiles de citas/redes sociales.
@@ -39,24 +80,25 @@ PERSONALIDAD DEL PERFIL (usar solo como referencia de TONO general, no para deta
 
 REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
 - NUNCA propongas ni hables de encontrarse, verse en persona, salir juntos, citas fisicas, viajes, desplazamientos o quedadas.
-- PROHIBIDO usar las siguientes palabras o frases: "a veces", "aveces", "sin prisa", "frontera", "verse", "encontrarse", "encontrarnos", "verme", "verte", "viajar", "viaje", "desplazarse", "quedar", "cita", "salir juntos", "en persona", "presencial".
+- PROHIBIDO usar las siguientes palabras o frases: "a veces", "aveces", "sin prisa", "sin prisas", "poco a poco", "con calma", "frontera", "verse", "encontrarse", "encontrarnos", "verme", "verte", "viajar", "viaje", "desplazarse", "quedar", "cita", "salir juntos", "en persona", "presencial".
 - REEMPLAZA OBLIGATORIAMENTE "a veces" por "de vez en cuando" en cualquier contexto.
 - NO uses placeholders como [nombre], [Nombre], {{nombre}} o similares. Genera el contenido directo.
-- LOS MENSAJES DEBEN SER GENERALES Y SIRVIR PARA CUALQUIER PERFIL - no menciones detalles específicos del perfil (profesión, hobbies específicos, hijos, mascotas, lugares concretos, etc.)
+- LOS MENSAJES DEBEN SER GENERALES Y SERVIR PARA CUALQUIER PERFIL - no menciones detalles específicos del perfil (profesión, hobbies específicos, hijos, mascotas, lugares concretos, etc.)
 - Usa el perfil solo para adaptar el TONO (formal/casual, romántico/directo, dulce/picante) pero el CONTENIDO debe ser universal.
-- Se natural, autentico y conversacional.
-- Evita frases genericas o roboticas.
+- FORMATO PROHIBIDO: NUNCA uses el formato "Etiqueta: texto" o "Concepto: descripcion" o "Titulo: contenido". Escribe el contenido de forma directa y natural, como un mensaje real de chat. INCORRECTO: "Saludo: Hola, ¿como estas?". CORRECTO: "Hola, ¿como estas?".
+- Se natural, autentico y conversacional. Escribe como una persona real, no como una IA generando una ficha técnica.
+- Evita frases genericas o roboticas. Evita estructuras de listas con etiquetas.
 - Longitud: 1-3 parrafos segun el tipo.
-- Sin emojis excesivos (maximo 1-2 si encajan).
+- Sin emojis excesivos (maximo 1-2 si encajan naturalmente).
 - En espanol neutro/latinoamericano.
-- Nunca generes contenido automatico sin que el usuario te lo pida."""
+- VARIEDAD: Cada vez que generes contenido, hazlo diferente a lo anterior. Si recibes instrucciones sobre contenido previo a evitar, respétalas."""
 
     def _construir_prompt_tipo(self, tipo: TipoMensaje, prompt_personalidad: str) -> str:
         import random
         # Temas universales rotativos para variar cada generación
         temas_saludo = ["tranquilidad nocturna y desconexión", "pequeños placeres del día a día", "reflexión y paz mental", "bienestar y autocuidado simple", "la magia de lo cotidiano", "desconectar del ruido", "gratitud por lo simple", "momentos de calma"]
         temas_icebreaker = ["rituales de bienestar y relajación", "pequeños placeres que alegran el día", "conexión con la naturaleza y lo simple", "momentos de desconexión digital", "hábitos que cuidan la mente", "la belleza de lo imperfecto", "rutinas que reconfortan", "encontrar paz en lo ordinario"]
-        temas_barrido = ["preparar algo rico para uno mismo", "cuidarse con un baño o rutina nocturna", "leer o escuchar música tranquila", "pasear sin rumbo fijo", "cocinar lento y disfrutar el proceso", "ordenar un rincón y sentir paz", "escribir o reflexionar al final del día", "disfrutar un café/te sin prisas"]
+        temas_barrido = ["preparar algo rico para uno mismo", "cuidarse con un baño o rutina nocturna", "leer o escuchar música tranquila", "pasear sin rumbo fijo", "cocinar lento y disfrutar el proceso", "ordenar un rincón y sentir paz", "escribir o reflexionar al final del día", "disfrutar un café o té con tranquilidad"]
         temas_insistencia = ["un recuerdo bonito que apareció hoy", "una canción que te hizo sonreír", "un pensamiento al despertar", "algo pequeño que te alegró el día", "una frase que leíste y resonó", "el olor a lluvia o café por la mañana", "ver un atardecer o amanecer", "reírte de algo tonto"]
         temas_rapidas = ["curiosidades de la historia humana", "maravillas de la ciencia y el universo", "psicología y cómo funcionamos", "naturaleza y sus secretos", "tecnología y su lado humano", "arte y creatividad cotidiana", "filosofía práctica para vivir", "hechos asombrosos del mundo"]
         temas_posts = ["gratitud por lo simple", "motivación suave para el día", "reflexión sobre el ritmo de vida", "desconexión y presencia", "pequeños actos de autocuidado", "belleza en lo imperfecto", "la importancia de pausar", "conexión genuina"]
@@ -69,7 +111,7 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
         tema_posts = random.choice(temas_posts)
         
         prompts = {
-            TipoMensaje.SALUDO: f"Genera UN SOLO saludo (NO 4, solo 1) para SALUDOS GENERALES. ESTRUCTURA EXACTA:\n\n[Nombre del perfil] (Perspectiva breve)\n    Tema de hoy: {tema_saludo}\n\n¡Hola! [Párrafo 1: escena/contexto casual universal - ej: 'Me daba una vuelta por aquí para saludarte en este rato de tranquilidad...']\n\n[Párrafo 2: reflexión universal sobre {tema_saludo} que cualquiera pueda relacionar]\n\n[Párrafo 3: cierre cálido + pregunta abierta universal tipo '¿qué tal te trata la noche?' o '¿cómo va todo por ahí?']\n\nREGLAS: Solo UN saludo. 3 párrafos coherentes. NO pongas número (1.). NO repitas el nombre en el cuerpo. CONTENIDO 100% GENERAL - sin detalles específicos (no menciones: teatro, cocina específica, perros, hijos, trabajo específico, lugares concretos). Estilo: cercano, 'Me daba una vuelta por aquí', 'hacer un paréntesis', 'soltar la lista de pendientes'. Usa 'de vez en cuando' NO 'a veces'. TEMA OBLIGATORIO: {tema_saludo}.",
+            TipoMensaje.SALUDO: f"Genera UN SOLO saludo directo y natural (NO 4, solo 1) para SALUDOS GENERALES. ESTRUCTURA:\n\n¡Hola! [Párrafo 1: escena/contexto casual universal - ej: 'Me daba una vuelta por aquí para saludarte en este rato de tranquilidad...']\n\n[Párrafo 2: reflexión universal sobre {tema_saludo} que cualquiera pueda relacionar]\n\n[Párrafo 3: cierre cálido + pregunta abierta universal tipo '¿qué tal te trata la noche?' o '¿cómo va todo por ahí?']\n\nREGLAS: Solo UN saludo. 3 párrafos coherentes. NO uses etiquetas como 'Tema:', 'Saludo:', ni números. NO pongas el nombre del perfil en el cuerpo. CONTENIDO 100% GENERAL. Estilo: cercano, conversacional. Usa 'de vez en cuando' NO 'a veces'.",
 
             TipoMensaje.ICEBREAKER: f"Genera EXACTAMENTE 4 icebreakers numerados (1-4) para el PLAN DE TRABAJO. CADA UNO DEBE COMENZAR OBLIGATORIAMENTE CON UN ICONO/EMOJI DIFERENTE al principio (ej: 🤝, 🛡️, 🎯, ⚖️). Formato: '1. 🤝 [Texto reflexivo universal con pregunta final]'. TEMA OBLIGATORIO PARA LOS 4: {tema_icebreaker}. Temas universales, genéricos, que sirvan para cualquier persona. NO uses detalles específicos (teatro, cocina concreta, mascotas, hijos, profesión). Las 4 opciones deben relacionarse temáticamente entre sí (mismo tema universal: {tema_icebreaker}). No uses placeholders. VARÍA el tema cada generación.",
 
@@ -112,8 +154,8 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
             contents=user_prompt,
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_prompt,
-                temperature=0.8,
-                max_output_tokens=2000,
+                temperature=0.95,
+                max_output_tokens=2500,
             )
         )
         return response.text if response.text else ""
@@ -126,8 +168,8 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
         response = self.groq_client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=messages,
-            temperature=0.8,
-            max_tokens=2000
+            temperature=0.95,
+            max_tokens=2500
         )
         return response.choices[0].message.content if response.choices else ""
 

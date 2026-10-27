@@ -65,10 +65,18 @@ async def generar_mensajes(perfil_id: UUID, request: MessageRequest, current_use
     if not perfil:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
     
+    # Obtener últimos mensajes para evitar repetición
+    ultimos = supabase_service.get_ultimos_mensajes_by_perfil(perfil_id)
+    
     # Generar mensajes con IA en un hilo separado para no bloquear el servidor
     try:
         mensajes = await asyncio.wait_for(
-            asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], request.tipos),
+            asyncio.to_thread(
+                ai_service.generar_mensajes,
+                perfil["prompt_personalidad"],
+                request.tipos,
+                ultimos  # Pasar historial para evitar repetición
+            ),
             timeout=120.0  # 2 minutos máximo
         )
         
@@ -181,6 +189,9 @@ async def generar_plan_trabajo(perfil_id: UUID, current_user: UUID = Depends(get
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
     try:
+        # Obtener últimos mensajes para evitar repetición
+        ultimos = supabase_service.get_ultimos_mensajes_by_perfil(perfil_id)
+
         # Generar todos los tipos del plan de trabajo
         tipos_plan = [
             TipoMensaje.ICEBREAKER,
@@ -191,7 +202,7 @@ async def generar_plan_trabajo(perfil_id: UUID, current_user: UUID = Depends(get
         ]
         
         mensajes = await asyncio.wait_for(
-            asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], tipos_plan),
+            asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], tipos_plan, ultimos),
             timeout=120.0
         )
         
@@ -231,6 +242,9 @@ async def generar_new_feed(perfil_id: UUID, current_user: UUID = Depends(get_cur
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
     try:
+        # Obtener últimos mensajes para evitar repetición
+        ultimos = supabase_service.get_ultimos_mensajes_by_perfil(perfil_id)
+
         # Generar todos los tipos del new feed
         tipos_feed = [
             TipoMensaje.RESPUESTAS_RAPIDAS,
@@ -240,7 +254,7 @@ async def generar_new_feed(perfil_id: UUID, current_user: UUID = Depends(get_cur
         ]
         
         mensajes = await asyncio.wait_for(
-            asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], tipos_feed),
+            asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], tipos_feed, ultimos),
             timeout=120.0
         )
         
