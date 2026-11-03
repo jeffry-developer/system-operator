@@ -348,29 +348,33 @@ async def generar_cartas_pagadora(perfil_id: UUID, request: CartasPagadoraReques
 
     try:
         num_parrafos = getattr(request, 'parrafos', 20) or 20
-        # Construir prompt con contexto de continuidad
-        prompt_contexto = f"""{perfil["prompt_personalidad"]}
+        if request.cantidad < 0:
+            raise HTTPException(status_code=422, detail="La cantidad de cartas no puede ser negativa")
+        if request.cantidad > 0 and not 3 <= num_parrafos <= 40:
+            raise HTTPException(status_code=422, detail="La cantidad de párrafos debe estar entre 3 y 40")
+
+        contexto = f"""{perfil["prompt_personalidad"]}
 
 CONTEXTO DE CONTINUIDAD PARA PAGADORA '{request.pagadora}':
 - Última carta enviada: #{numero_inicial}
 - Tipo anterior: {tipo_anterior}
 - Notas/contexto: {notas}
-- Instrucciones adicionales: {request.instrucciones or 'Ninguna'}
+- Instrucciones adicionales: {request.instrucciones or 'Ninguna'}"""
 
-REGLAS ESTRICTAS DE GENERACIÓN DE CARTAS:
-- Genera {request.cantidad} carta(s) de tipo '{request.tipo}' (romántica o sexual).
-- LONGITUD OBLIGATORIA: Cada carta DEBE tener EXACTAMENTE {num_parrafos} PÁRRAFOS sustanciosos y detallados, separados entre sí por doble salto de línea.
-- Si el tipo es 'romantica': seductora, profunda, apasionada, íntima, con un ritmo poético y magnético que mantenga enganchada a la lectora durante los {num_parrafos} párrafos.
-- Si el tipo es 'sexual': explícita, táctil, ardiente, erótica, intensa, directa, explorando sensaciones y fantasías continuas durante los {num_parrafos} párrafos.
-- NO uses placeholders como [nombre]. Escribe el texto de corrido de forma inmersiva.
-- Separador entre cartas (si hay más de 1): '---'."""
-        
-        mensajes = await asyncio.wait_for(
-            asyncio.to_thread(ai_service.generar_mensajes, prompt_contexto, [TipoMensaje.CARTA_ROMANTICA]),
-            timeout=120.0
-        )
-        
-        contenido = mensajes.get("carta_romantica", "")
+        cartas = []
+        for _ in range(request.cantidad):
+            carta = await asyncio.wait_for(
+                asyncio.to_thread(
+                    ai_service.generar_carta_extensa,
+                    contexto,
+                    request.tipo,
+                    num_parrafos,
+                ),
+                timeout=120.0,
+            )
+            cartas.append(carta)
+
+        contenido = "\n\n---\n\n".join(cartas)
         
         # Actualizar marcador
         nuevo_numero = numero_inicial + request.cantidad
@@ -396,6 +400,8 @@ REGLAS ESTRICTAS DE GENERACIÓN DE CARTAS:
             "contenido": contenido
         }
         
+    except HTTPException:
+        raise
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="La IA tardó demasiado. Intenta de nuevo.")
     except Exception as e:

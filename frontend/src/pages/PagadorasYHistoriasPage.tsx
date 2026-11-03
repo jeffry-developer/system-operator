@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type DragEvent } from "react";
 import {
   Copy, Loader2, Sparkles, RotateCcw,
   Heart, Plus, Trash2, Eye, BookOpen, UserPlus,
   Save, Bookmark, Edit2, Flag, Check, ChevronRight,
   Flame, FileText, ArrowRight, ChevronLeft, Sliders,
-  CheckCircle2, ArrowUpRight, Compass, LocateFixed
+  CheckCircle2, ArrowUpRight, Compass, LocateFixed, GripVertical, MousePointer2
 } from "lucide-react";
 import { api } from "../services/api";
 import { useToast } from "../components/Toast";
@@ -82,6 +82,7 @@ export function PagadorasYHistoriasPage() {
   const [posicionesPagadoras, setPosicionesPagadoras] = useState<Record<string, number>>({});
   const [highlightedParagraph, setHighlightedParagraph] = useState<number | null>(null);
   const [draggingPagadora, setDraggingPagadora] = useState<string | null>(null);
+  const [dragOverParagraph, setDragOverParagraph] = useState<number | null>(null);
 
   const paragraphRefs = useRef<Record<number, HTMLDivElement | null>>({});
 
@@ -410,6 +411,24 @@ export function PagadorasYHistoriasPage() {
     scrollToParagraph(targetIdx);
   };
 
+  const startMarkerDrag = (event: DragEvent<HTMLElement>, pagadora: string) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", pagadora);
+    setDraggingPagadora(pagadora);
+  };
+
+  const finishMarkerDrag = () => {
+    setDraggingPagadora(null);
+    setDragOverParagraph(null);
+  };
+
+  const dropMarkerAtParagraph = (event: DragEvent<HTMLElement>, paragraphIndex: number) => {
+    event.preventDefault();
+    const pagadora = draggingPagadora || event.dataTransfer.getData("text/plain");
+    if (pagadora) updatePagadoraPosition(pagadora, paragraphIndex);
+    finishMarkerDrag();
+  };
+
   // Reiniciar todos los marcadores al párrafo 1 para el documento actual
   const resetMarcadores = () => {
     setPosicionesPagadoras({});
@@ -614,7 +633,7 @@ export function PagadorasYHistoriasPage() {
                   <input
                     type="range"
                     min={3}
-                    max={35}
+                    max={40}
                     step={1}
                     value={cartaParrafos}
                     onChange={(e) => setCartaParrafos(parseInt(e.target.value, 10))}
@@ -927,7 +946,12 @@ export function PagadorasYHistoriasPage() {
                   </p>
                 </div>
               ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <>
+                  <div className="flex items-center gap-2 rounded-xl border border-purple-100 bg-purple-50/70 px-3 py-2 text-xs text-purple-700 dark:border-purple-900/60 dark:bg-purple-950/30 dark:text-purple-300">
+                    <MousePointer2 className="h-3.5 w-3.5 shrink-0" />
+                    Arrastra un marcador y suéltalo en el carril junto al párrafo donde va cada pagadora.
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {pagadoras.map((pag) => {
                     const color = getColorForPagadora(pag);
                     const currentPIdx = posicionesPagadoras[pag] ?? 0;
@@ -938,21 +962,34 @@ export function PagadorasYHistoriasPage() {
                       <div
                         key={pag}
                         className={cn(
-                          "p-3 rounded-xl border transition-all shadow-xs flex flex-col justify-between gap-2",
+                          "p-3 rounded-xl border transition-all shadow-xs flex flex-col justify-between gap-2 select-none",
+                          parrafos.length > 0 && "hover:-translate-y-0.5 hover:shadow-md",
+                          draggingPagadora === pag && "opacity-50 ring-2 ring-purple-400",
                           color.light,
                           color.border
                         )}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span
-                              className={cn(
-                                "w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-xs",
-                                color.bg
-                              )}
+                            <button
+                              type="button"
+                              draggable={parrafos.length > 0}
+                              onDragStart={(event) => startMarkerDrag(event, pag)}
+                              onDragEnd={finishMarkerDrag}
+                              disabled={parrafos.length === 0}
+                              className="flex cursor-grab items-center gap-1 rounded-lg p-0.5 transition-transform hover:scale-105 active:cursor-grabbing disabled:cursor-not-allowed"
+                              title={`Arrastrar marcador de ${pag}`}
                             >
-                              {pag.charAt(0).toUpperCase()}
-                            </span>
+                              <GripVertical className="h-4 w-4 shrink-0 text-gray-400" />
+                              <span
+                                className={cn(
+                                  "w-7 h-7 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-xs",
+                                  color.bg
+                                )}
+                              >
+                                {pag.charAt(0).toUpperCase()}
+                              </span>
+                            </button>
                             <div>
                               <h4 className="font-bold text-gray-900 dark:text-gray-100 text-xs">{pag}</h4>
                               <span className="text-[10px] text-gray-500 dark:text-gray-400">
@@ -1016,7 +1053,8 @@ export function PagadorasYHistoriasPage() {
                       </div>
                     );
                   })}
-                </div>
+                  </div>
+                </>
               )}
             </div>
 
@@ -1034,7 +1072,7 @@ export function PagadorasYHistoriasPage() {
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="relative space-y-4 pl-14 before:absolute before:bottom-6 before:left-5 before:top-6 before:w-px before:bg-gradient-to-b before:from-purple-300 before:via-purple-200 before:to-transparent dark:before:from-purple-700 dark:before:via-purple-900">
                   {parrafos.map((p, idx) => {
                     const pagadorasAqui = pagadoras.filter(
                       (pag) => (posicionesPagadoras[pag] ?? 0) === idx
@@ -1045,22 +1083,61 @@ export function PagadorasYHistoriasPage() {
                       <div
                         key={idx}
                         ref={(el) => (paragraphRefs.current[idx] = el)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDrop={(e) => {
-                          e.preventDefault();
-                          if (draggingPagadora) {
-                            updatePagadoraPosition(draggingPagadora, idx);
-                            setDraggingPagadora(null);
-                          }
+                        onDragEnter={() => setDragOverParagraph(idx)}
+                        onDragOver={(event) => {
+                          event.preventDefault();
+                          event.dataTransfer.dropEffect = "move";
                         }}
+                        onDrop={(event) => dropMarkerAtParagraph(event, idx)}
                         className={cn(
                           "p-5 rounded-2xl border transition-all duration-300 relative group bg-white dark:bg-gray-900 shadow-xs",
                           pagadorasAqui.length > 0
                             ? "border-purple-300 dark:border-purple-700 bg-purple-50/30 dark:bg-purple-950/20"
                             : "border-gray-100 dark:border-gray-800 hover:border-gray-200 dark:hover:border-gray-700",
-                          isHighlighted && "ring-4 ring-purple-400 dark:ring-purple-600 shadow-lg scale-[1.01]"
+                          isHighlighted && "ring-4 ring-purple-400 dark:ring-purple-600 shadow-lg scale-[1.01]",
+                          draggingPagadora && "border-dashed border-purple-300 dark:border-purple-700",
+                          dragOverParagraph === idx && "border-purple-500 bg-purple-50/70 ring-4 ring-purple-200 shadow-lg dark:border-purple-400 dark:bg-purple-950/30 dark:ring-purple-900/70"
                         )}
                       >
+                        <div className="absolute -left-14 top-1/2 z-10 flex -translate-y-1/2 flex-col items-center gap-1">
+                          {pagadorasAqui.length > 0 ? (
+                            pagadorasAqui.map((pag) => {
+                              const color = getColorForPagadora(pag);
+                              return (
+                                <button
+                                  key={pag}
+                                  type="button"
+                                  draggable
+                                  onDragStart={(event) => startMarkerDrag(event, pag)}
+                                  onDragEnd={finishMarkerDrag}
+                                  onClick={() => scrollToParagraph(idx)}
+                                  className={cn(
+                                    "group/marker relative flex h-10 w-10 cursor-grab items-center justify-center rounded-xl border-2 border-white text-xs font-black text-white shadow-lg ring-2 ring-white transition-all hover:scale-110 active:cursor-grabbing dark:border-gray-950 dark:ring-gray-950",
+                                    color.bg,
+                                    draggingPagadora === pag && "scale-110 opacity-40"
+                                  )}
+                                  title={`${pag}: párrafo ${idx + 1}. Arrastra para mover`}
+                                  aria-label={`Mover marcador de ${pag} desde el párrafo ${idx + 1}`}
+                                >
+                                  {pag.charAt(0).toUpperCase()}
+                                  <GripVertical className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full bg-white p-0.5 text-gray-500 shadow dark:bg-gray-800 dark:text-gray-300" />
+                                  <span className="pointer-events-none absolute left-12 whitespace-nowrap rounded-lg bg-gray-950 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover/marker:opacity-100">
+                                    {pag}
+                                  </span>
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <span
+                              className={cn(
+                                "h-3 w-3 rounded-full border-2 border-white bg-gray-300 shadow-sm ring-1 ring-gray-200 transition-all dark:border-gray-950 dark:bg-gray-700 dark:ring-gray-800",
+                                draggingPagadora && "h-5 w-5 animate-pulse bg-purple-300 ring-4 ring-purple-100 dark:bg-purple-700 dark:ring-purple-950",
+                                dragOverParagraph === idx && "h-7 w-7 bg-purple-500 ring-4 ring-purple-200 dark:bg-purple-400 dark:ring-purple-900"
+                              )}
+                            />
+                          )}
+                        </div>
+
                         {/* Header del Párrafo */}
                         <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-gray-100 dark:border-gray-800">
                           <div className="flex items-center gap-2">
@@ -1077,46 +1154,23 @@ export function PagadorasYHistoriasPage() {
                             {pagadorasAqui.map((pag) => {
                               const color = getColorForPagadora(pag);
                               return (
-                                <span
+                                <button
                                   key={pag}
+                                  type="button"
+                                  draggable
+                                  onDragStart={(event) => startMarkerDrag(event, pag)}
+                                  onDragEnd={finishMarkerDrag}
                                   className={cn(
-                                    "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white shadow-xs animate-fadeIn",
+                                    "inline-flex cursor-grab items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold text-white shadow-xs transition-transform hover:scale-105 active:cursor-grabbing",
                                     color.bg
                                   )}
+                                  title={`Arrastrar marcador de ${pag}`}
                                 >
-                                  <Flag className="w-3 h-3" />
+                                  <GripVertical className="h-3 w-3" />
                                   {pag} va aquí
-                                </span>
+                                </button>
                               );
                             })}
-
-                            {/* Botón rápido para situar a cualquier pagadora en este párrafo */}
-                            {pagadoras.length > 0 && (
-                              <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                                <span className="text-[10px] text-gray-400 mr-1">Situar:</span>
-                                {pagadoras.map((pag) => {
-                                  const estaAqui = (posicionesPagadoras[pag] ?? 0) === idx;
-                                  if (estaAqui) return null;
-                                  const color = getColorForPagadora(pag);
-                                  return (
-                                    <button
-                                      key={pag}
-                                      onClick={() => updatePagadoraPosition(pag, idx)}
-                                      className={cn(
-                                        "text-[10px] font-bold px-2 py-0.5 rounded-full border transition-all",
-                                        color.light,
-                                        color.border,
-                                        color.text,
-                                        "hover:scale-105"
-                                      )}
-                                      title={`Mover a ${pag} a este párrafo`}
-                                    >
-                                      + {pag}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            )}
                           </div>
                         </div>
 

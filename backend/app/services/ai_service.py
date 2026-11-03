@@ -4,6 +4,7 @@ from groq import Groq
 from app.core.config import settings
 from app.models.schemas import TipoMensaje
 from typing import Dict, List
+import re
 
 
 class AIService:
@@ -36,6 +37,86 @@ class AIService:
             mensajes[tipo.value] = self._sanitizar_texto(contenido.strip())
 
         return mensajes
+
+    def generar_carta_extensa(self, contexto: str, tipo: str, num_parrafos: int) -> str:
+        """Genera una sola carta con una cantidad exacta de párrafos sin numeración."""
+        estilo = (
+            "explícita, táctil, ardiente, erótica, intensa y directa"
+            if tipo == "sexual"
+            else "seductora, profunda, apasionada, íntima, poética y magnética"
+        )
+        system_prompt = self._construir_system_prompt(contexto)
+        prompt = f"""Escribe UNA SOLA carta de tipo '{tipo}'.
+
+REQUISITOS DE SALIDA OBLIGATORIOS:
+- Escribe EXACTAMENTE {num_parrafos} párrafos completos, sustanciosos y conectados entre sí.
+- Separa cada párrafo únicamente con una línea en blanco.
+- Devuelve solamente el cuerpo de la carta.
+- NO numeres los párrafos y NO uses títulos, encabezados, listas, viñetas, etiquetas ni separadores.
+- NO escribas expresiones como "Párrafo 1", "Carta 1" o similares.
+- Mantén un único hilo narrativo de principio a fin.
+- El estilo debe ser {estilo}.
+- No uses placeholders como [nombre].
+
+Antes de responder, cuenta internamente los párrafos y confirma que sean exactamente {num_parrafos}. No muestres esa cuenta."""
+
+        contenido = self._llamar_ia(system_prompt, prompt)
+        parrafos = self._extraer_parrafos_carta(contenido)
+
+        if len(parrafos) != num_parrafos:
+            borrador = "\n\n".join(parrafos)
+            correccion = f"""Reescribe el siguiente borrador como UNA SOLA carta con EXACTAMENTE {num_parrafos} párrafos.
+
+Cada párrafo debe ser sustancioso y estar separado por una línea en blanco. Devuelve únicamente el cuerpo final, sin números, títulos, viñetas, etiquetas, conteos ni separadores. Conserva el tono {estilo} y el hilo narrativo.
+
+BORRADOR:
+{borrador}"""
+            contenido = self._llamar_ia(system_prompt, correccion)
+            parrafos = self._extraer_parrafos_carta(contenido)
+
+        if len(parrafos) != num_parrafos:
+            raise ValueError(
+                f"La IA devolvió {len(parrafos)} párrafos en lugar de {num_parrafos}. Intenta generar la carta nuevamente."
+            )
+
+        return "\n\n".join(parrafos)
+
+    def _extraer_parrafos_carta(self, texto: str) -> List[str]:
+        if not texto:
+            return []
+
+        limpio = texto.replace("```text", "").replace("```", "").strip()
+        bloques = re.split(r"\n\s*\n+", limpio)
+
+        if len(bloques) == 1:
+            bloques_numerados = re.split(
+                r"(?m)^\s*(?:p[áa]rrafo\s*)?(?:#\s*)?\d{1,3}\s*[.):-]\s*",
+                limpio,
+            )
+            bloques_numerados = [bloque for bloque in bloques_numerados if bloque.strip()]
+            if len(bloques_numerados) > 1:
+                bloques = bloques_numerados
+
+        parrafos = []
+        for bloque in bloques:
+            bloque = re.sub(
+                r"^\s*carta\s+(?:rom[áa]ntica|sexual|sensual)\s*:?\s*",
+                "",
+                bloque.strip(),
+                flags=re.IGNORECASE,
+            )
+            parrafo = re.sub(
+                r"^\s*(?:(?:p[áa]rrafo|carta)\s*)?(?:#\s*)?\d{1,3}\s*[.):-]\s*",
+                "",
+                bloque,
+                flags=re.IGNORECASE,
+            )
+            parrafo = re.sub(r"^\s*[-*•]\s+", "", parrafo)
+            parrafo = " ".join(linea.strip() for linea in parrafo.splitlines() if linea.strip())
+            if parrafo and not re.fullmatch(r"carta\s+(?:rom[áa]ntica|sexual|sensual)", parrafo, re.IGNORECASE):
+                parrafos.append(parrafo)
+
+        return parrafos
 
     def _sanitizar_texto(self, texto: str) -> str:
         if not texto:
@@ -88,7 +169,6 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
 - FORMATO PROHIBIDO: NUNCA uses el formato "Etiqueta: texto" o "Concepto: descripcion" o "Titulo: contenido". Escribe el contenido de forma directa y natural, como un mensaje real de chat. INCORRECTO: "Saludo: Hola, ¿como estas?". CORRECTO: "Hola, ¿como estas?".
 - Se natural, autentico y conversacional. Escribe como una persona real, no como una IA generando una ficha técnica.
 - Evita frases genericas o roboticas. Evita estructuras de listas con etiquetas.
-- Longitud: 1-3 parrafos segun el tipo.
 - Sin emojis excesivos (maximo 1-2 si encajan naturalmente).
 - En espanol neutro/latinoamericano.
 - VARIEDAD: Cada vez que generes contenido, hazlo diferente a lo anterior. Si recibes instrucciones sobre contenido previo a evitar, respétalas."""
