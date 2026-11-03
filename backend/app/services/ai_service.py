@@ -40,6 +40,7 @@ class AIService:
 
     def generar_carta_extensa(self, contexto: str, tipo: str, num_parrafos: int) -> str:
         """Genera una sola carta con una cantidad exacta de párrafos sin numeración."""
+        min_palabras_por_parrafo = 45 if tipo == "sexual" else 35
         estilo = (
             "explícita, táctil, ardiente, erótica, intensa y directa"
             if tipo == "sexual"
@@ -50,6 +51,7 @@ class AIService:
 
 REQUISITOS DE SALIDA OBLIGATORIOS:
 - Escribe EXACTAMENTE {num_parrafos} párrafos completos, sustanciosos y conectados entre sí.
+- Cada párrafo debe tener COMO MÍNIMO {min_palabras_por_parrafo} palabras y desarrollar entre 3 y 5 oraciones. No escribas párrafos breves de una sola línea.
 - Separa cada párrafo únicamente con una línea en blanco.
 - Devuelve solamente el cuerpo de la carta.
 - NO numeres los párrafos y NO uses títulos, encabezados, listas, viñetas, etiquetas ni separadores.
@@ -62,21 +64,36 @@ Antes de responder, cuenta internamente los párrafos y confirma que sean exacta
 
         contenido = self._llamar_ia(system_prompt, prompt)
         parrafos = self._extraer_parrafos_carta(contenido)
+        parrafos_cortos = [
+            parrafo for parrafo in parrafos
+            if len(parrafo.split()) < min_palabras_por_parrafo
+        ]
 
-        if len(parrafos) != num_parrafos:
+        if len(parrafos) != num_parrafos or parrafos_cortos:
             borrador = "\n\n".join(parrafos)
             correccion = f"""Reescribe el siguiente borrador como UNA SOLA carta con EXACTAMENTE {num_parrafos} párrafos.
 
-Cada párrafo debe ser sustancioso y estar separado por una línea en blanco. Devuelve únicamente el cuerpo final, sin números, títulos, viñetas, etiquetas, conteos ni separadores. Conserva el tono {estilo} y el hilo narrativo.
+Cada párrafo debe contener COMO MÍNIMO {min_palabras_por_parrafo} palabras, desarrollar entre 3 y 5 oraciones y estar separado por una línea en blanco. Amplía cualquier párrafo corto con sensaciones, contexto y continuidad; no uses frases de relleno. Devuelve únicamente el cuerpo final, sin números, títulos, viñetas, etiquetas, conteos ni separadores. Conserva el tono {estilo} y el hilo narrativo.
 
 BORRADOR:
 {borrador}"""
             contenido = self._llamar_ia(system_prompt, correccion)
             parrafos = self._extraer_parrafos_carta(contenido)
+            parrafos_cortos = [
+                parrafo for parrafo in parrafos
+                if len(parrafo.split()) < min_palabras_por_parrafo
+            ]
 
-        if len(parrafos) != num_parrafos:
+        if len(parrafos) != num_parrafos or parrafos_cortos:
+            problemas = []
+            if len(parrafos) != num_parrafos:
+                problemas.append(f"generó {len(parrafos)} párrafos en lugar de {num_parrafos}")
+            if parrafos_cortos:
+                problemas.append(
+                    f"{len(parrafos_cortos)} párrafos quedaron por debajo de {min_palabras_por_parrafo} palabras"
+                )
             raise ValueError(
-                f"La IA devolvió {len(parrafos)} párrafos en lugar de {num_parrafos}. Intenta generar la carta nuevamente."
+                f"La IA no cumplió el formato requerido: {'; '.join(problemas)}. Intenta generar la carta nuevamente."
             )
 
         return "\n\n".join(parrafos)
