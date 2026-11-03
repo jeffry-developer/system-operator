@@ -159,6 +159,18 @@ class ApiService {
     return response.data;
   }
 
+  async updatePagadora(perfilId: string, pagadoraId: string, nombrePagadora: string) {
+    const response = await this.client.put(`/perfiles/${perfilId}/pagadoras/${pagadoraId}`, {
+      nombre_pagadora: nombrePagadora,
+    });
+    return response.data;
+  }
+
+  async deletePagadora(perfilId: string, pagadoraId: string) {
+    const response = await this.client.delete(`/perfiles/${perfilId}/pagadoras/${pagadoraId}`);
+    return response.data;
+  }
+
   // Historias
   async generarHistoria(perfilId: string, data: { tipo: string; tema: string; pagadora?: string }) {
     const response = await this.client.post(`/perfiles/${perfilId}/generar-historia`, data);

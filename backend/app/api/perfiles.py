@@ -9,7 +9,7 @@ from app.services.ai_service import ai_service
 from app.models.schemas import (
     PerfilCreate, PerfilUpdate, Perfil, MessageRequest, MessageResponse, 
     TipoMensaje, CartasPagadoraRequest, HistoriaRequest,
-    CartaPagadora, HistoriaGuardadaCreate, HistoriaGuardada
+    CartaPagadora, HistoriaGuardadaCreate, HistoriaGuardada, PagadoraUpdate
 )
 from app.api.auth import get_current_user
 
@@ -463,6 +463,45 @@ async def get_pagadoras(perfil_id: UUID, current_user: UUID = Depends(get_curren
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
     
     return supabase_service.get_cartas_pagadoras_by_perfil(perfil_id)
+
+
+@router.put("/{perfil_id}/pagadoras/{pagadora_id}")
+async def update_pagadora(perfil_id: UUID, pagadora_id: UUID, request: PagadoraUpdate, current_user: UUID = Depends(get_current_user)):
+    """Renombra una pagadora y mantiene sus historias asociadas."""
+    perfil = supabase_service.get_perfil(perfil_id, current_user)
+    if not perfil:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+    nuevo_nombre = request.nombre_pagadora.strip()
+    if not nuevo_nombre:
+        raise HTTPException(status_code=422, detail="El nombre de la pagadora es obligatorio")
+    if len(nuevo_nombre) > 100:
+        raise HTTPException(status_code=422, detail="El nombre no puede superar 100 caracteres")
+
+    pagadora = supabase_service.get_carta_pagadora_by_id(perfil_id, pagadora_id)
+    if not pagadora:
+        raise HTTPException(status_code=404, detail="Pagadora no encontrada")
+
+    existente = supabase_service.get_carta_pagadora(perfil_id, nuevo_nombre)
+    if existente and existente["id"] != str(pagadora_id):
+        raise HTTPException(status_code=409, detail="Ya existe una pagadora con ese nombre")
+
+    actualizada = supabase_service.rename_carta_pagadora(perfil_id, pagadora_id, nuevo_nombre)
+    if not actualizada:
+        raise HTTPException(status_code=500, detail="No se pudo actualizar la pagadora")
+    return actualizada
+
+
+@router.delete("/{perfil_id}/pagadoras/{pagadora_id}")
+async def delete_pagadora(perfil_id: UUID, pagadora_id: UUID, current_user: UUID = Depends(get_current_user)):
+    """Elimina una pagadora y desvincula sus historias."""
+    perfil = supabase_service.get_perfil(perfil_id, current_user)
+    if not perfil:
+        raise HTTPException(status_code=404, detail="Perfil no encontrado")
+
+    if not supabase_service.delete_carta_pagadora(perfil_id, pagadora_id):
+        raise HTTPException(status_code=404, detail="Pagadora no encontrada")
+    return {"message": "Pagadora eliminada correctamente"}
 
 
 @router.get("/{perfil_id}/historias")

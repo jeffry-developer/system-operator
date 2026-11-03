@@ -151,6 +151,10 @@ class CartasPagadoraRequest(BaseModel):
     instrucciones: Optional[str] = None
 
 
+class PagadoraUpdate(BaseModel):
+    nombre_pagadora: str
+
+
 class HistoriaRequest(BaseModel):
     tipo: str  # romantica, sensual, sexual, personalizada
     tema: str

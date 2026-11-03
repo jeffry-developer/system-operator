@@ -63,6 +63,9 @@ export function PagadorasYHistoriasPage() {
   const [showPagadoraModal, setShowPagadoraModal] = useState(false);
   const [newPagadoraName, setNewPagadoraName] = useState("");
   const [pagadorasMarcadores, setPagadorasMarcadores] = useState<CartaPagadora[]>([]);
+  const [editingPagadora, setEditingPagadora] = useState<CartaPagadora | null>(null);
+  const [editPagadoraName, setEditPagadoraName] = useState("");
+  const [updatingPagadora, setUpdatingPagadora] = useState(false);
 
   // === HISTORIAS & ESTUDIO ===
   const [historias, setHistorias] = useState<HistoriaGuardada[]>([]);
@@ -288,25 +291,87 @@ export function PagadorasYHistoriasPage() {
     }
   };
 
-  const deletePagadora = async (nombre: string) => {
-    if (!confirm(`¿Eliminar la pagadora "${nombre}"?`)) return;
+  const syncPagadoraLocalReferences = (oldName: string, newName: string | null) => {
+    const storagePrefix = `posiciones_pagadoras_${selectedPerfilId}_`;
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(storagePrefix)) continue;
+
+      try {
+        const storedPositions = JSON.parse(localStorage.getItem(key) || "{}") as Record<string, number>;
+        if (!(oldName in storedPositions)) continue;
+        if (newName) storedPositions[newName] = storedPositions[oldName];
+        delete storedPositions[oldName];
+        localStorage.setItem(key, JSON.stringify(storedPositions));
+      } catch { }
+    }
+
+    const updatedPositions = { ...posicionesPagadoras };
+    if (oldName in updatedPositions) {
+      if (newName) updatedPositions[newName] = updatedPositions[oldName];
+      delete updatedPositions[oldName];
+      setPosicionesPagadoras(updatedPositions);
+    }
+
+    const updatedCartas = cartasGuardadas.map((carta) =>
+      carta.pagadora === oldName
+        ? { ...carta, pagadora: newName || undefined }
+        : carta
+    );
+    saveCartasGuardadasToStorage(updatedCartas);
+    setCartaPagadora((value) => value === oldName ? newName || "" : value);
+    setSaveCartaPagadora((value) => value === oldName ? newName || "" : value);
+    setEditorPagadoraAsociada((value) => value === oldName ? newName || "" : value);
+  };
+
+  const openEditPagadora = (pagadora: CartaPagadora) => {
+    setEditingPagadora(pagadora);
+    setEditPagadoraName(pagadora.nombre_pagadora);
+  };
+
+  const updatePagadora = async () => {
+    if (!editingPagadora) return;
+    const nuevoNombre = editPagadoraName.trim();
+    if (!nuevoNombre) {
+      showError("Ingresa un nombre para la pagadora");
+      return;
+    }
+    if (
+      nuevoNombre.toLowerCase() !== editingPagadora.nombre_pagadora.toLowerCase()
+      && pagadoras.some((nombre) => nombre.toLowerCase() === nuevoNombre.toLowerCase())
+    ) {
+      showError("Esa pagadora ya existe");
+      return;
+    }
+    if (nuevoNombre === editingPagadora.nombre_pagadora) {
+      setEditingPagadora(null);
+      return;
+    }
+
+    setUpdatingPagadora(true);
     try {
-      await api.generarCartasPagadora(selectedPerfilId, {
-        pagadora: nombre,
-        tipo: "romantica",
-        cantidad: 0,
-      });
-      const nuevasPos = { ...posicionesPagadoras };
-      delete nuevasPos[nombre];
-      setPosicionesPagadoras(nuevasPos);
-      if (selectedPerfilId) {
-        localStorage.setItem(`posiciones_pagadoras_${selectedPerfilId}_${estudioDocId}`, JSON.stringify(nuevasPos));
-      }
+      await api.updatePagadora(selectedPerfilId, editingPagadora.id, nuevoNombre);
+      syncPagadoraLocalReferences(editingPagadora.nombre_pagadora, nuevoNombre);
+      setEditingPagadora(null);
+      await Promise.all([loadPagadoras(), loadHistorias()]);
+      success(`Pagadora renombrada como "${nuevoNombre}"`);
+    } catch (e: any) {
+      showError(e.response?.data?.detail || "Error al actualizar pagadora");
+    } finally {
+      setUpdatingPagadora(false);
+    }
+  };
+
+  const deletePagadora = async (pagadora: CartaPagadora) => {
+    const nombre = pagadora.nombre_pagadora;
+    if (!confirm(`¿Eliminar la pagadora "${nombre}"? Sus historias quedarán sin pagadora asociada.`)) return;
+    try {
+      await api.deletePagadora(selectedPerfilId, pagadora.id);
+      syncPagadoraLocalReferences(nombre, null);
       success(`Pagadora "${nombre}" eliminada`);
-      loadPagadoras();
-      loadHistorias();
-    } catch {
-      showError("Error al eliminar pagadora");
+      await Promise.all([loadPagadoras(), loadHistorias()]);
+    } catch (e: any) {
+      showError(e.response?.data?.detail || "Error al eliminar pagadora");
     }
   };
 
@@ -1372,14 +1437,30 @@ export function PagadorasYHistoriasPage() {
                         </div>
                       </div>
 
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deletePagadora(nombre)}
-                        className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => marcador && openEditPagadora(marcador)}
+                          disabled={!marcador}
+                          className="text-purple-600 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20"
+                          title={`Editar ${nombre}`}
+                          aria-label={`Editar pagadora ${nombre}`}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => marcador && deletePagadora(marcador)}
+                          disabled={!marcador}
+                          className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                          title={`Eliminar ${nombre}`}
+                          aria-label={`Eliminar pagadora ${nombre}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   );
                 })}
@@ -1465,6 +1546,60 @@ export function PagadorasYHistoriasPage() {
             </Button>
             <Button type="submit" className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold">
               Crear Pagadora
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* MODAL: EDITAR PAGADORA */}
+      <Modal
+        isOpen={!!editingPagadora}
+        onClose={() => !updatingPagadora && setEditingPagadora(null)}
+        title="Editar Pagadora"
+        size="sm"
+      >
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            updatePagadora();
+          }}
+          className="space-y-4"
+        >
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            El nuevo nombre también se actualizará en sus historias, cartas guardadas y marcadores del Estudio.
+          </p>
+          <div>
+            <Label htmlFor="pagadora_edit_nombre">Nombre de la pagadora *</Label>
+            <Input
+              id="pagadora_edit_nombre"
+              value={editPagadoraName}
+              onChange={(event) => setEditPagadoraName(event.target.value)}
+              placeholder="Nombre de la pagadora"
+              maxLength={100}
+              required
+              autoFocus
+            />
+          </div>
+          <div className="flex gap-3 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setEditingPagadora(null)}
+              disabled={updatingPagadora}
+              className="flex-1"
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              disabled={updatingPagadora || !editPagadoraName.trim()}
+              className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-semibold"
+            >
+              {updatingPagadora ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Guardando...</>
+              ) : (
+                <><Save className="w-4 h-4 mr-2" /> Guardar Cambios</>
+              )}
             </Button>
           </div>
         </form>

@@ -135,6 +135,13 @@ class SupabaseService:
         except Exception:
             return None
 
+    def get_carta_pagadora_by_id(self, perfil_id: UUID, pagadora_id: UUID) -> Optional[Dict]:
+        try:
+            response = self.client.table("cartas_pagadoras").select("*").eq("id", str(pagadora_id)).eq("perfil_id", str(perfil_id)).single().execute()
+            return response.data if response.data else None
+        except Exception:
+            return None
+
     def upsert_carta_pagadora(self, perfil_id: UUID, nombre_pagadora: str, ultima_carta_numero: int, ultima_carta_tipo: str, notas: str = "") -> Optional[Dict]:
         data = {
             "perfil_id": str(perfil_id),
@@ -146,6 +153,34 @@ class SupabaseService:
         }
         response = self.client.table("cartas_pagadoras").upsert(data, on_conflict="perfil_id,nombre_pagadora").execute()
         return response.data[0] if response.data else None
+
+    def rename_carta_pagadora(self, perfil_id: UUID, pagadora_id: UUID, nuevo_nombre: str) -> Optional[Dict]:
+        actual = self.get_carta_pagadora_by_id(perfil_id, pagadora_id)
+        if not actual:
+            return None
+
+        response = self.client.table("cartas_pagadoras").update({
+            "nombre_pagadora": nuevo_nombre,
+            "fecha_actualizacion": datetime.utcnow().isoformat(),
+        }).eq("id", str(pagadora_id)).eq("perfil_id", str(perfil_id)).execute()
+
+        if response.data:
+            self.client.table("historias_guardadas").update({
+                "pagadora_asociada": nuevo_nombre,
+            }).eq("perfil_id", str(perfil_id)).eq("pagadora_asociada", actual["nombre_pagadora"]).execute()
+            return response.data[0]
+        return None
+
+    def delete_carta_pagadora(self, perfil_id: UUID, pagadora_id: UUID) -> bool:
+        actual = self.get_carta_pagadora_by_id(perfil_id, pagadora_id)
+        if not actual:
+            return False
+
+        self.client.table("historias_guardadas").update({
+            "pagadora_asociada": None,
+        }).eq("perfil_id", str(perfil_id)).eq("pagadora_asociada", actual["nombre_pagadora"]).execute()
+        response = self.client.table("cartas_pagadoras").delete().eq("id", str(pagadora_id)).eq("perfil_id", str(perfil_id)).execute()
+        return len(response.data) > 0
 
     # =========================================================================
     # HISTORIAS GUARDADAS
