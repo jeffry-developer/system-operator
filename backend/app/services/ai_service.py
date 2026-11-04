@@ -7,6 +7,24 @@ from typing import Dict, List
 import re
 
 
+TERMINOS_PROHIBIDOS = (
+    ("compañía", re.compile(r"\bcompa(?:ñ|n)(?:ía|ia|ías|ias|ero|era|eros|eras)\b", re.IGNORECASE)),
+    ("compartir", re.compile(r"\bcompart\w*\b", re.IGNORECASE)),
+    ("juntos", re.compile(r"\bjunt[oa]s?\b", re.IGNORECASE)),
+    ("conocerse", re.compile(r"\bconoc\w*\b", re.IGNORECASE)),
+    ("verse", re.compile(r"\b(?:vernos|verme|verte|verse|verlos|verlas)\b", re.IGNORECASE)),
+    ("encuentros", re.compile(r"\b(?:encontrarnos|encontrarme|encontrarte|encontrarse|encuentro|encuentros)\b", re.IGNORECASE)),
+    ("citas", re.compile(r"\bcitas?\b", re.IGNORECASE)),
+    ("quedadas", re.compile(r"\b(?:quedar|quedarnos|quedada|quedadas)\b", re.IGNORECASE)),
+    ("viajes", re.compile(r"\bviaj\w*\b", re.IGNORECASE)),
+    ("desplazarse", re.compile(r"\bdesplaz\w*\b", re.IGNORECASE)),
+    ("en persona", re.compile(r"\ben\s+persona\b", re.IGNORECASE)),
+    ("presencial", re.compile(r"\bpresencial(?:es)?\b", re.IGNORECASE)),
+    ("con calma", re.compile(r"\bcon\s+calma\b", re.IGNORECASE)),
+    ("frontera", re.compile(r"\bfronteras?\b", re.IGNORECASE)),
+)
+
+
 class AIService:
     def __init__(self):
         self.provider = settings.AI_PROVIDER.lower()
@@ -177,8 +195,11 @@ PERSONALIDAD DEL PERFIL (usar solo como referencia de TONO general, no para deta
 {prompt_personalidad}
 
 REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
-- NUNCA propongas ni hables de encontrarse, verse en persona, salir juntos, citas fisicas, viajes, desplazamientos o quedadas.
-- PROHIBIDO usar las siguientes palabras o frases: "a veces", "aveces", "sin prisa", "sin prisas", "poco a poco", "con calma", "frontera", "verse", "encontrarse", "encontrarnos", "verme", "verte", "viajar", "viaje", "desplazarse", "quedar", "cita", "salir juntos", "en persona", "presencial".
+- LENGUAJE MUY SENCILLO: usa palabras comunes, frases cortas y mensajes fáciles de entender a la primera. Debe entenderlos cualquier mujer adulta, sin importar su edad o nivel de estudios.
+- Evita palabras rebuscadas, lenguaje técnico, metáforas difíciles y frases demasiado poéticas o abstractas. Escribe como una persona real en una conversación diaria.
+- NUNCA propongas ni insinúes encuentros reales, verse, conocerse en persona, salir, viajar, quedar o hacer planes presenciales.
+- PROHIBIDO usar cualquier forma de estas palabras o ideas: "compañía", "compañero", "compañera", "compartir", "juntos", "juntas", "conocer", "conocerte", "conocerse", "verse", "vernos", "verme", "verte", "encontrarse", "encontrarnos", "viajar", "viaje", "desplazarse", "quedar", "quedada", "cita", "salir juntos", "en persona" y "presencial".
+- Tampoco uses estas frases: "a veces", "aveces", "sin prisa", "sin prisas", "poco a poco", "con calma" y "frontera".
 - REEMPLAZA OBLIGATORIAMENTE "a veces" por "de vez en cuando" en cualquier contexto.
 - NO uses placeholders como [nombre], [Nombre], {{nombre}} o similares. Genera el contenido directo.
 - LOS MENSAJES DEBEN SER GENERALES Y SERVIR PARA CUALQUIER PERFIL - no menciones detalles específicos del perfil (profesión, hobbies específicos, hijos, mascotas, lugares concretos, etc.)
@@ -212,15 +233,22 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
 
             TipoMensaje.ICEBREAKER: f"Genera EXACTAMENTE 4 icebreakers numerados (1-4) para el PLAN DE TRABAJO. CADA UNO DEBE COMENZAR OBLIGATORIAMENTE CON UN ICONO/EMOJI DIFERENTE al principio (ej: 🤝, 🛡️, 🎯, ⚖️). Formato: '1. 🤝 [Texto reflexivo universal con pregunta final]'. TEMA OBLIGATORIO PARA LOS 4: {tema_icebreaker}. Temas universales, genéricos, que sirvan para cualquier persona. NO uses detalles específicos (teatro, cocina concreta, mascotas, hijos, profesión). Las 4 opciones deben relacionarse temáticamente entre sí (mismo tema universal: {tema_icebreaker}). No uses placeholders. VARÍA el tema cada generación.",
 
-            TipoMensaje.CARTA_ROMPEHIELOS: "Genera UNA SOLA 'Carta de Rompehielos' para el PLAN DE TRABAJO. Reflexión profunda/romántica universal sobre la vida: la necesidad de compañía natural, sentirnos amados, tener a alguien que nos cuide. Temas: soledad vs compañía, el valor de lo simple, la importancia de que alguien piense en ti. Extensión: 2-3 párrafos. Termina OBLIGATORIAMENTE con pregunta tipo '¿opinas lo mismo?' o similar. CONTENIDO 100% GENERAL - sin detalles personales específicos. No uses placeholders.",
+            TipoMensaje.CARTA_ROMPEHIELOS: "Genera UNA SOLA 'Carta de Rompehielos' para el PLAN DE TRABAJO. Usa una reflexión romántica, sencilla y fácil de entender sobre recibir cariño, sentirse importante y saber que alguien piensa en ti. Habla del valor de los pequeños detalles y de una conversación que alegra el día. Extensión: 2-3 párrafos. Termina OBLIGATORIAMENTE con una pregunta como '¿opinas lo mismo?' o similar. CONTENIDO 100% GENERAL, sin detalles personales específicos. No uses placeholders.",
 
-            TipoMensaje.CARTA_BARRIDO: f"Genera 2 'Cartas de Barrido' numeradas (1-2) para el PLAN DE TRABAJO. Son historias personales CORTAS y UNIVERSALES de vida diaria genérica. TEMA OBLIGATORIO PARA LAS 2 (misma actividad continua): {tema_barrido}. Ejemplo: Carta 1 haciendo la actividad -> Carta 2 reflexionando sobre compartirla. TERMINAN con pregunta personal universal. NO uses detalles específicos (no: pasticho, teatro, perra Ofelia, hijos, profesiones). CONTENIDO GENERAL para cualquier perfil. No uses placeholders. VARÍA el tema cada generación.",
+            TipoMensaje.CARTA_BARRIDO: f"Genera 2 'Cartas de Barrido' numeradas (1-2) para el PLAN DE TRABAJO. Son historias CORTAS, sencillas y UNIVERSALES sobre la vida diaria. TEMA OBLIGATORIO PARA LAS 2 (misma actividad continua): {tema_barrido}. La primera cuenta la actividad y la segunda cuenta qué sensación dejó. TERMINAN con una pregunta personal fácil de responder. NO uses detalles específicos (no: pasticho, teatro, mascotas, hijos o profesiones). CONTENIDO GENERAL para cualquier perfil. No uses placeholders. VARÍA el tema cada generación.",
 
-            TipoMensaje.INSISTENCIA: f"Genera 2 mensajes de insistencia numerados (1-2) para el PLAN DE TRABAJO. Coherentes entre sí, mismo hilo temático universal. TEMA OBLIGATORIO: {tema_insistencia}. Comparten una anécdota o reflexión cotidiana genérica sobre este tema. SIN reclamar que no han respondido. TERMINAN con pregunta universal. NO uses detalles específicos (hijos, familia concreta, eventos personales únicos). CONTENIDO GENERAL para cualquier perfil. No uses placeholders. VARÍA el tema cada generación.",
+            TipoMensaje.INSISTENCIA: f"Genera 2 mensajes de insistencia numerados (1-2) para el PLAN DE TRABAJO. Deben seguir el mismo tema y ser fáciles de entender. TEMA OBLIGATORIO: {tema_insistencia}. Cuenta una anécdota o una idea cotidiana sobre este tema. NO reclames por la falta de respuesta. TERMINA cada mensaje con una pregunta sencilla. NO uses detalles específicos (hijos, una familia concreta o eventos únicos). CONTENIDO GENERAL para cualquier perfil. No uses placeholders. VARÍA el tema cada generación.",
 
             TipoMensaje.RESPUESTAS_RAPIDAS: f"Genera 3 respuestas rápidas numeradas (1-3) para el NEW FEED. Temas interesantes/fascinantes UNIVERSALES. TEMA OBLIGATORIO PARA LAS 3 (misma conversación continua): {tema_rapidas}. ESTRICTO: Las 3 respuestas deben estar RELACIONADAS LÓGICAMENTE entre sí como si fueran parte de una misma conversación continua sobre este tema. Cada una con pregunta para enganchar. CONTENIDO 100% GENERAL - sin referencias personales. No uses placeholders. VARÍA el tema cada generación.",
 
-            TipoMensaje.POSTS: f"Genera EXACTAMENTE 3 posts numerados (1-3) para el NEW FEED. Adaptados al TONO del perfil (categoria_feed + prompt_personalidad solo para tono: romántico, motivacional, reflexivo, divertido). TEMA OBLIGATORIO PARA LOS 3 (variados pero relacionados): {tema_posts}. CONTENIDO TEMAS UNIVERSALES variados dentro de este tema. CADA POST DEBE INCLUIR AL FINAL: '📸 [Imagen sugerida: descripción genérica universal: atardecer, café, libro, naturaleza, ventana, manos, silueta, etc.]'. NO uses detalles personales específicos. No uses placeholders. VARÍA el tema cada generación.",
+            TipoMensaje.POSTS: f"""Genera EXACTAMENTE 3 publicaciones numeradas (1-3) para la sección de Publicaciones. Adapta solo el TONO al perfil: romántico, motivador, reflexivo o divertido. TEMA OBLIGATORIO PARA LAS 3: {tema_posts}. Usa ideas universales y fáciles de entender.
+
+Después del texto de CADA publicación agrega este bloque:
+
+PROMPT PARA CHATGPT:
+\"Crea una imagen vertical en formato 4:5 sobre [descripción completa de la escena relacionada con esa publicación]. Usa un estilo visual claro y atractivo. No pongas palabras, letras, logos ni marcas de agua dentro de la imagen.\"
+
+Cada prompt debe estar completo y listo para copiar en ChatGPT. Reemplaza la parte entre corchetes con una descripción real; no dejes corchetes ni placeholders. Los 3 prompts deben ser diferentes y deben describir solamente personas adultas cuando aparezcan personas. NO uses detalles personales específicos. VARÍA el tema en cada generación.""",
 
             TipoMensaje.CARTA_ROMANTICA: """Genera una serie de MINIMO 6 cartas romanticcas o sensuales cortas (de exactamente 2 parrafos cada una), numeradas del 1 al 6+. Cada carta debe ser diferente en tema y tono: algunas mas romanticcas y tiernas, otras mas sensuales e insinuantes (sin ser explicitas). Deben generar deseo, intriga y ganas de responder. Formato: cada carta separada por '---'. Ejemplo de estructura:
 1. [carta romantica, 2 parrafos]
@@ -239,11 +267,46 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
         return prompts.get(tipo, "Genera un mensaje apropiado y adaptado a las reglas estipuladas.")
 
     def _llamar_ia(self, system_prompt: str, user_prompt: str) -> str:
+        contenido = self._llamar_proveedor(system_prompt, user_prompt)
+        contenido = self._sanitizar_texto(contenido.strip())
+        incumplimientos = self._buscar_terminos_prohibidos(contenido)
+
+        if incumplimientos:
+            lista = ", ".join(incumplimientos)
+            correccion = f"""Reescribe el texto de abajo sin cambiar su estructura, cantidad de elementos ni cantidad de párrafos.
+
+Usa palabras comunes y frases cortas que cualquier mujer adulta pueda entender a la primera.
+Elimina por completo estas palabras o ideas prohibidas detectadas: {lista}.
+No hables de encuentros, planes presenciales ni de estar físicamente cerca.
+Devuelve solamente el texto corregido, sin explicaciones.
+
+TEXTO:
+{contenido}"""
+            contenido = self._llamar_proveedor(system_prompt, correccion)
+            contenido = self._sanitizar_texto(contenido.strip())
+            incumplimientos = self._buscar_terminos_prohibidos(contenido)
+            if incumplimientos:
+                raise ValueError(
+                    "La IA usó términos que no están permitidos: "
+                    + ", ".join(incumplimientos)
+                    + ". Intenta generar el contenido nuevamente."
+                )
+
+        return contenido
+
+    def _llamar_proveedor(self, system_prompt: str, user_prompt: str) -> str:
         if self.provider == "gemini":
             return self._llamar_gemini(system_prompt, user_prompt)
         elif self.provider == "groq":
             return self._llamar_groq(system_prompt, user_prompt)
         return ""
+
+    def _buscar_terminos_prohibidos(self, texto: str) -> List[str]:
+        encontrados = []
+        for nombre, patron in TERMINOS_PROHIBIDOS:
+            if patron.search(texto):
+                encontrados.append(nombre)
+        return encontrados
 
     def _llamar_gemini(self, system_prompt: str, user_prompt: str) -> str:
         response = self.gemini_client.models.generate_content(
@@ -251,7 +314,7 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
             contents=user_prompt,
             config=genai_types.GenerateContentConfig(
                 system_instruction=system_prompt,
-                temperature=0.95,
+                temperature=0.75,
                 max_output_tokens=6000,
             )
         )
@@ -265,7 +328,7 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
         response = self.groq_client.chat.completions.create(
             model="openai/gpt-oss-120b",
             messages=messages,
-            temperature=0.95,
+            temperature=0.75,
             max_tokens=6000
         )
         return response.choices[0].message.content if response.choices else ""

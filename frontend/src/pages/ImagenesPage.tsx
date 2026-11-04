@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Loader2, Image, Download, Trash2, Search, RefreshCw, Plus, X } from 'lucide-react';
+import { Loader2, Image, Download, Trash2, RefreshCw, Plus, Info } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
 import { ImagenDescargada } from '../types';
@@ -14,7 +14,7 @@ export function ImagenesPage() {
   const [scraping, setScraping] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [showScrapeModal, setShowScrapeModal] = useState(false);
-  const [scrapeQuery, setScrapeQuery] = useState('romantic aesthetic');
+  const [scrapeQuery, setScrapeQuery] = useState('flores románticas');
   const [scrapeEtiqueta, setScrapeEtiqueta] = useState('romantica');
   const [scrapeMax, setScrapeMax] = useState(20);
   const { success, error: showError } = useToast();
@@ -43,7 +43,7 @@ export function ImagenesPage() {
       setShowScrapeModal(false);
       fetchImagenes();
     } catch (err) {
-      showError('Error en el scraper');
+      showError('No se pudieron buscar imágenes');
     } finally {
       setScraping(false);
     }
@@ -53,10 +53,10 @@ export function ImagenesPage() {
     setScraping(true);
     try {
       const result = await api.scrapeBancosLibres(scrapeEtiqueta, scrapeMax);
-      success(`${result.imagenes.length} imágenes nuevas de bancos libres`);
+      success(`${result.imagenes.length} imágenes nuevas guardadas`);
       fetchImagenes();
     } catch (err) {
-      showError('Error en el scraper de bancos libres');
+      showError('No se pudieron buscar imágenes gratis');
     } finally {
       setScraping(false);
     }
@@ -106,15 +106,15 @@ export function ImagenesPage() {
 
   const handleDownloadAll = async () => {
     try {
-      success(`Iniciando descarga de ${imagenes.length} imágenes...`);
+      success(`Descargando ${imagenes.length} imágenes...`);
       for (const img of imagenes) {
         await handleDownload(img.url_origen, img.id);
         // Pequeño delay para no bloquear el navegador y permitir que se registren las descargas
         await new Promise((resolve) => setTimeout(resolve, 300));
       }
-      success('Descarga del lote finalizada');
+      success('Todas las imágenes fueron descargadas');
     } catch {
-      showError('Hubo un error al intentar descargar el lote');
+      showError('No se pudieron descargar todas las imágenes');
     }
   };
 
@@ -131,36 +131,43 @@ export function ImagenesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Imágenes</h1>
-          <p className="text-gray-600 dark:text-gray-400">Galería de imágenes sin duplicados por usuario</p>
+          <p className="text-gray-600 dark:text-gray-400">Tus imágenes guardadas, sin repetir</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="danger" onClick={handleDeleteAll} disabled={imagenes.length === 0 || scraping}>
             <Trash2 className="w-4 h-4 mr-2" />
-            Limpiar Galería
+            Borrar todas
           </Button>
           <Button variant="outline" onClick={handleDownloadAll} disabled={imagenes.length === 0 || scraping}>
             <Download className="w-4 h-4 mr-2" />
-            Descargar Lote
+            Descargar todas
           </Button>
           <Button variant="outline" onClick={handleScrapeBancos} disabled={scraping}>
             <RefreshCw className="w-4 h-4 mr-2" />
-            Bancos Libres
+            Buscar por tipo
           </Button>
           <Button onClick={() => setShowScrapeModal(true)} disabled={scraping}>
             <Plus className="w-4 h-4 mr-2" />
-            Scraper Pinterest
+            Buscar imágenes
           </Button>
         </div>
+      </div>
+
+      <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
+        <Info className="mt-0.5 h-5 w-5 shrink-0" />
+        <p>
+          Aquí se buscan imágenes en servicios gratuitos. No se crean imágenes nuevas con ChatGPT.
+        </p>
       </div>
 
       {imagenes.length === 0 ? (
         <div className="card p-12 text-center bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800">
           <Image className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
           <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-2">No hay imágenes</h3>
-          <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Usa el scraper para descargar imágenes nuevas</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">Busca imágenes nuevas y guárdalas aquí</p>
           <Button onClick={() => setShowScrapeModal(true)}>
             <Plus className="w-4 h-4 mr-2" />
-            Buscar en Pinterest
+            Buscar imágenes
           </Button>
         </div>
       ) : (
@@ -177,20 +184,20 @@ export function ImagenesPage() {
         </div>
       )}
 
-      <Modal isOpen={showScrapeModal} onClose={() => setShowScrapeModal(false)} title="Buscar en Pinterest">
+      <Modal isOpen={showScrapeModal} onClose={() => setShowScrapeModal(false)} title="Buscar imágenes">
         <form onSubmit={handleScrape} className="space-y-4">
           <div>
-            <Label htmlFor="scrapeQuery">Término de búsqueda</Label>
+            <Label htmlFor="scrapeQuery">¿Qué imagen buscas?</Label>
             <Input
               id="scrapeQuery"
               value={scrapeQuery}
               onChange={(e) => setScrapeQuery(e.target.value)}
-              placeholder="romantic aesthetic, couple goals, etc."
+              placeholder="Ejemplo: flores, atardecer, café"
             />
           </div>
 
           <div>
-            <Label htmlFor="scrapeEtiqueta">Etiqueta</Label>
+            <Label htmlFor="scrapeEtiqueta">Tipo de imagen</Label>
             <select
               id="scrapeEtiqueta"
               value={scrapeEtiqueta}
@@ -205,7 +212,7 @@ export function ImagenesPage() {
           </div>
 
           <div>
-            <Label htmlFor="scrapeMax">Máximo de imágenes</Label>
+            <Label htmlFor="scrapeMax">Cantidad de imágenes</Label>
             <Input
               id="scrapeMax"
               type="number"
@@ -221,7 +228,7 @@ export function ImagenesPage() {
               Cancelar
             </Button>
             <Button type="submit" disabled={scraping} className="flex-1">
-              {scraping ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar y Descargar'}
+              {scraping ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Buscar y guardar'}
             </Button>
           </div>
         </form>

@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../utils/helpers';
-import { Menu, X, LogOut, User, Settings, Image, FileText, Layout as LayoutIcon, Sparkles, BookOpen, Moon, Sun } from 'lucide-react';
+import { Menu, X, LogOut, User, Settings, FileText, Layout as LayoutIcon, Sparkles, BookOpen, Moon, Sun } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from './Button';
@@ -15,9 +15,8 @@ export function Layout() {
   const navItems = [
     { path: '/perfiles', label: 'Perfiles', icon: User },
     { path: '/plan-trabajo', label: 'Plan de Trabajo', icon: FileText },
-    { path: '/new-feed', label: 'New Feed', icon: LayoutIcon },
+    { path: '/new-feed', label: 'Publicaciones', icon: LayoutIcon },
     { path: '/estudio', label: 'Estudio (Cartas & Historias)', icon: BookOpen },
-    { path: '/imagenes', label: 'Imágenes', icon: Image },
   ];
 
   return (

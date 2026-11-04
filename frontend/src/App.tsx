@@ -6,7 +6,6 @@ import { PerfilesPage } from './pages/PerfilesPage';
 import { PlanDeTrabajoPage } from './pages/PlanDeTrabajoPage';
 import { NewFeedPage } from './pages/NewFeedPage';
 import { PagadorasYHistoriasPage } from './pages/PagadorasYHistoriasPage';
-import { ImagenesPage } from './pages/ImagenesPage';
 import { ConfiguracionPage } from './pages/ConfiguracionPage';
 import { useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/Toast';
@@ -75,7 +74,6 @@ export function App() {
             <Route path="/estudio" element={<PagadorasYHistoriasPage />} />
             <Route path="/cartas-dinamicas" element={<Navigate to="/estudio" replace />} />
             <Route path="/pagadoras-historias" element={<Navigate to="/estudio" replace />} />
-            <Route path="/imagenes" element={<ImagenesPage />} />
             <Route path="/configuracion" element={<ConfiguracionPage />} />
             <Route path="/" element={<Navigate to="/perfiles" replace />} />
           </Route>

@@ -142,7 +142,7 @@ export function MensajesPage() {
               <div className="p-2 bg-purple-100 rounded-lg text-purple-600">
                 <Layout className="w-6 h-6" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">New Feed</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Publicaciones</h2>
             </div>
             <Button 
               onClick={() => handleGenerate(NEW_FEED, 'feed_completo')} 

@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Copy, Loader2, Sparkles, RotateCcw, Layout, Download, MessageCircle, Zap, MessageSquare } from 'lucide-react';
+import { Copy, Loader2, Sparkles, RotateCcw, Layout, MessageCircle, Zap, MessageSquare } from 'lucide-react';
 import { api } from '../services/api';
 import { useToast } from '../components/Toast';
 import { Perfil, TipoMensaje } from '../types';
@@ -10,7 +10,7 @@ import { copyToClipboard } from '../utils/helpers';
 const NEW_FEED_TIPOS: TipoMensaje[] = ['posts', 'respuestas_rapidas', 'insistencia', 'saludo'];
 
 const FEED_META: Record<string, { label: string; color: string; bg: string; border: string; Icon: any }> = {
-  posts: { label: 'Ideas de Posts', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-100 dark:border-purple-900/40', Icon: Layout },
+  posts: { label: 'Publicaciones y prompts', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-100 dark:border-purple-900/40', Icon: Layout },
   respuestas_rapidas: { label: 'Respuestas Rápidas', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-100 dark:border-blue-900/40', Icon: Zap },
   insistencia: { label: 'Mensajes de Insistencia', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-100 dark:border-amber-900/40', Icon: MessageCircle },
   saludo: { label: 'Saludo', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-100 dark:border-green-900/40', Icon: MessageSquare },
@@ -52,29 +52,6 @@ export function NewFeedPage() {
     try { await copyToClipboard(text); success('Copiado'); } catch { showError('Error al copiar'); }
   };
 
-  const handleDownloadImage = async (url: string, idx: number) => {
-    try {
-      const res = await fetch(url);
-      const blob = await res.blob();
-      const dlUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = dlUrl;
-      a.download = `post-imagen-${idx + 1}.jpg`;
-      document.body.appendChild(a); a.click();
-      window.URL.revokeObjectURL(dlUrl); document.body.removeChild(a);
-    } catch { showError('Error al descargar'); }
-  };
-
-  const parseImages = (text: string) => {
-    const re = /(https?:\/\/[^\s]+(?:\.jpg|\.jpeg|\.png|\.gif|\.webp|unsplash\.com|pinimg\.com)[^\s]*)/gi;
-    return text?.match(re) || [];
-  };
-
-  const cleanText = (text: string) => {
-    const re = /(https?:\/\/[^\s]+(?:\.jpg|\.jpeg|\.png|\.gif|\.webp|unsplash\.com|pinimg\.com)[^\s]*)/gi;
-    return text?.replace(re, '').replace(/Post \d+:\s*/g, '').replace(/\[Imagenes.*?\]/g, '').trim() || '';
-  };
-
   if (perfiles.length === 0) return (
     <div className="card p-12 text-center">
       <Sparkles className="w-16 h-16 text-primary-400 mx-auto mb-6 animate-pulse" />
@@ -91,9 +68,9 @@ export function NewFeedPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-1 flex items-center gap-2">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg"><Layout className="w-5 h-5 text-purple-600 dark:text-purple-400" /></div>
-            New Feed
+            Publicaciones
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">Posts, respuestas, insistencia y saludos por perfil.</p>
+          <p className="text-gray-500 dark:text-gray-400">Publicaciones, respuestas y saludos para cada perfil.</p>
         </div>
         <div className="flex items-end gap-3">
           <div className="flex flex-col">
@@ -104,7 +81,7 @@ export function NewFeedPage() {
           </div>
           <Button onClick={() => handleGenerate(NEW_FEED_TIPOS, 'feed_all')} disabled={isGeneratingAll} className="bg-purple-600 hover:bg-purple-700">
             {isGeneratingAll ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <RotateCcw className="w-4 h-4 mr-2" />}
-            Renovar Feed
+            Generar todo de nuevo
           </Button>
         </div>
       </div>
@@ -115,8 +92,7 @@ export function NewFeedPage() {
           const { Icon } = meta;
           const contenido = mensajes[tipo] || '';
           const isLoading = loading || isGeneratingAll || generatingTypes.has(tipo);
-          const imageUrls = tipo === 'posts' ? parseImages(contenido) : [];
-          const textoDisplay = tipo === 'posts' ? cleanText(contenido) : contenido;
+          const textoDisplay = contenido;
 
           return (
             <div key={tipo} className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
@@ -144,24 +120,7 @@ export function NewFeedPage() {
                     <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-5/6" />
                   </div>
                 ) : textoDisplay ? (
-                  <div className="space-y-4">
-                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{textoDisplay}</p>
-                    {imageUrls.length > 0 && (
-                      <div className="grid grid-cols-3 gap-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-                        {imageUrls.map((url, i) => (
-                          <div key={i} className="relative group aspect-square rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-                            <img src={url} alt={`Post ${i + 1}`} className="w-full h-full object-cover" />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
-                              <span className="text-white text-xs font-semibold">Post {i + 1}</span>
-                              <Button size="icon" variant="secondary" className="h-8 w-8" onClick={() => handleDownloadImage(url, i)}>
-                                <Download className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{textoDisplay}</p>
                 ) : (
                   <div className="flex flex-col items-center py-8 text-center">
                     <Icon className={`w-10 h-10 ${meta.color} opacity-20 mb-3`} />

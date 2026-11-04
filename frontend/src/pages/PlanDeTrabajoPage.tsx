@@ -62,7 +62,7 @@ export function PlanDeTrabajoPage() {
             <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg"><FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" /></div>
             Plan de Trabajo
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">Icebreakers, cartas y mensajes de contacto por perfil.</p>
+          <p className="text-gray-500 dark:text-gray-400">Rompehielos, cartas y mensajes para cada perfil.</p>
         </div>
         <div className="flex items-end gap-3">
           <div className="flex flex-col">

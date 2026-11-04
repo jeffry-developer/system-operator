@@ -80,26 +80,6 @@ async def generar_mensajes(perfil_id: UUID, request: MessageRequest, current_use
             timeout=120.0  # 2 minutos máximo
         )
         
-        # Auto-Scraping para Posts (Opcion 1)
-        if "posts" in request.tipos and "posts" in mensajes:
-            from app.services.scraper_service import scraper_service
-            query = perfil.get("categoria_feed", "aesthetic")
-            # Limpiar query (ej: 'estilo_de_vida' -> 'lifestyle')
-            if query == "estilo_de_vida": query = "lifestyle"
-            if query == "general": query = "aesthetic"
-            
-            imagenes = await scraper_service.scrape_bancos_libres(
-                usuario_id=current_user,
-                query=query,
-                etiqueta=query,
-                max_imagenes=3
-            )
-            
-            if imagenes:
-                urls = "\n\n📸 [Imágenes recomendadas guardadas en tu Galería]:\n"
-                for i, img in enumerate(imagenes):
-                    urls += f"Post {i+1}: {img['url_origen']}\n"
-                mensajes["posts"] += urls
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="La IA tardó demasiado. Intenta de nuevo.")
     except Exception as e:
@@ -153,32 +133,33 @@ Y DOS PERFILES EXTRAS DE CUIDO AL FINAL (OBLIGATORIOS):
 {n + 2}. Perfil Extra (Cuido, mimo y bienestar protector)
 
 REGLAS OBLIGATORIAS:
-1. HORARIO NOCHE Y MADRUGADA (OBLIGATORIO): Cada saludo debe funcionar y tener perfecto sentido TANTO si se envía de noche COMO si se envía en la madrugada. Emplea expresiones naturales como: "ya sea cerrando el día o transitando la madrugada", "a estas horas de la noche o madrugada", "si andas despierto a estas horas", "para cerrar la jornada o velar la madrugada", etc.
-2. NUNCA REPETIR: Cada saludo debe abordar una perspectiva, metáfora o sensación diferente (desconexión mental, soltar la tensión del rostro o cuerpo, actitud positiva o anécdota graciosa, abrigo y protección suave, suspiro hondo y confort interior). No repitas frases entre saludos.
-3. FORMATO EXACTO REQUERIDO:
+1. HORARIO NOCHE Y MADRUGADA (OBLIGATORIO): Cada saludo debe servir tanto de noche como de madrugada. Usa frases sencillas como: "a estas horas", "si sigues despierto" o "antes de dormir".
+2. NUNCA REPETIR: Cada saludo debe tratar una idea fácil y diferente (descansar la mente, soltar la tensión del cuerpo, recordar algo gracioso, respirar profundo o pensar en algo bonito). No repitas frases entre saludos.
+3. LENGUAJE SENCILLO: Usa palabras comunes y oraciones cortas. Evita palabras rebuscadas, frases demasiado poéticas y explicaciones difíciles.
+4. FORMATO EXACTO REQUERIDO:
 Cada saludo debe constar obligatoriamente de:
 - Un encabezado: [Número]. [Nombre del Perfil] ([Enfoque / Perspectiva breve])
 - Párrafo 1: Escena nocturna de tranquilidad, respiro o pausa, y saludo cercano.
-- Párrafo 2: Reflexión sobre la noche/madrugada que conecte con la tranquilidad y desconexión.
+- Párrafo 2: Una idea sencilla sobre descansar durante la noche o la madrugada.
 - Párrafo 3: Deseo de bienestar + pregunta abierta si sigue despierto a estas horas (ej: "¿qué haces cuando quieres que tu mente deje de dar tantas vueltas?", "¿te habías dado cuenta de cuánta tensión guardas a veces en el rostro?").
 - Doble salto de línea entre saludos.
 
 EJEMPLO EXACTO DE LA ESTRUCTURA Y TONO REQUERIDO:
-1. Antonio (Nueva perspectiva y desconexión)
+1. Antonio (Descanso para la mente)
 
-Hay días en los que la mente agradece enormemente colgar los guantes y dejar de buscarle explicaciones a todo. Quise pasar a saludarte en este rato de tranquilidad para compartir un respiro distinto.
+Hay días en los que la mente necesita dejar de pensar tanto. Quise saludarte en este rato tranquilo y saber cómo estás.
 
-Decidí mirar el panorama con la guardia baja, permitiendo que cualquier idea pesada se diluya por sí sola. Esa distancia mental ayuda a desconectar por completo, ya sea cerrando el día o transitando la madrugada.
+Esta noche decidí dejar los problemas para mañana y respirar un poco. Es una forma simple de descansar cuando el día fue pesado.
 
-Ojalá estés disfrutando de un rincón sumamente apacible por allá. Si andas despierto a estas horas, cuéntame: ¿qué haces cuando quieres que tu mente deje de dar tantas vueltas?
+Espero que estés bien por allá. Si sigues despierto, dime: ¿qué haces cuando quieres dejar de pensar tanto?
 
-2. Juan M (Bienestar, relax y ritmo del día)
+2. Juan M (Soltar la tensión)
 
-Soltar la tensión que acumulamos en la frente y dejar la expresión completamente neutral es un alivio inmediato. Qué buen momento para asomarme a saludarte y desearte total serenidad.
+Hoy noté que tenía la frente tensa y los hombros duros. Respiré profundo y pensé que era un buen momento para saludarte.
 
-Me propuse revisar esos pequeños puntos donde el cuerpo se contrae sin que lo notemos, para devolverles la calma. Cuidar el bienestar físico a este nivel renueva la energía al instante, sin importar si es de noche o madrugada.
+Moví un poco los hombros y respiré varias veces. Algo tan simple puede ayudar cuando llega la noche y el cuerpo sigue tenso.
 
-Espero que estés experimentando una soltura muy agradable en este instante. Si tienes un huequito libre por ahí, dime: ¿te habías dado cuenta de cuánta tensión guardas a veces en el rostro?
+Espero que también puedas descansar. Si sigues despierto, dime: ¿notas cuando tienes la cara o los hombros tensos?
 
 Genera TODOS los {n + 2} saludos respetando esta estructura exacta."""
 
@@ -289,25 +270,6 @@ async def generar_new_feed(perfil_id: UUID, current_user: UUID = Depends(get_cur
             asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], tipos_feed, ultimos),
             timeout=120.0
         )
-        
-        # Scraping de imágenes para los posts
-        from app.services.scraper_service import scraper_service
-        query = perfil.get("categoria_feed", "aesthetic")
-        if query == "estilo_de_vida": query = "lifestyle"
-        if query == "general": query = "aesthetic"
-        
-        imagenes = await scraper_service.scrape_bancos_libres(
-            usuario_id=current_user,
-            query=query,
-            etiqueta=query,
-            max_imagenes=3
-        )
-        
-        if imagenes and "posts" in mensajes:
-            urls = "\n\n📸 [Imágenes recomendadas guardadas en tu Galería]:\n"
-            for i, img in enumerate(imagenes):
-                urls += f"Post {i+1}: {img['url_origen']}\n"
-            mensajes["posts"] += urls
         
         # Guardar en base de datos
         supabase_service_admin.save_mensajes(mensajes, perfil_id)

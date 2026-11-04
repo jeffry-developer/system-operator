@@ -102,17 +102,17 @@ export interface ApiError {
 
 export const TIPO_MENSAJE_LABELS: Record<TipoMensaje, string> = {
   saludo: 'Saludo',
-  icebreaker: 'Icebreakers',
+  icebreaker: 'Rompehielos',
   carta_barrido: 'Cartas de Barrido',
   insistencia: 'Mensajes de Insistencia',
   carta_rompehielos: 'Carta de Rompehielos',
   respuestas_rapidas: 'Respuestas Rápidas',
-  posts: 'Posts (New Feed)',
+  posts: 'Publicaciones',
   carta_romantica: 'Cartas Románticas/Sexys',
   dinamica_juego: 'Dinámicas y Juegos',
   saludo_plan_trabajo: 'Saludo (Plan Trabajo)',
-  saludo_new_feed: 'Saludo (New Feed)',
-  insistencia_new_feed: 'Insistencia (New Feed)',
+  saludo_new_feed: 'Saludo (Publicaciones)',
+  insistencia_new_feed: 'Insistencia (Publicaciones)',
 };
 
 export const TIPO_MENSAJE_ICONS: Record<TipoMensaje, string> = {

@@ -1014,7 +1014,7 @@ export function PagadorasYHistoriasPage() {
                 <>
                   <div className="flex items-center gap-2 rounded-xl border border-purple-100 bg-purple-50/70 px-3 py-2 text-xs text-purple-700 dark:border-purple-900/60 dark:bg-purple-950/30 dark:text-purple-300">
                     <MousePointer2 className="h-3.5 w-3.5 shrink-0" />
-                    Arrastra un marcador y suéltalo en el carril junto al párrafo donde va cada pagadora.
+                    Arrastra el nombre de la pagadora y suéltalo al lado del párrafo que le corresponde.
                   </div>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {pagadoras.map((pag) => {
@@ -1277,7 +1277,7 @@ export function PagadorasYHistoriasPage() {
                   Historias Guardadas
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Selecciona cualquier historia para abrirla en el Estudio y manipular los marcadores de tus pagadoras
+                  Selecciona una historia para abrirla en el Estudio y mover los nombres de tus pagadoras
                 </p>
               </div>
               <Button
@@ -1293,7 +1293,7 @@ export function PagadorasYHistoriasPage() {
                 <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                 <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay historias guardadas</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 mt-1">
-                  Genera una historia con IA o carga una carta para llevar el control con marcadores.
+                  Genera una historia con IA o carga una carta para llevar el control de cada pagadora.
                 </p>
                 <Button onClick={openNewHistoria} className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
                   <Sparkles className="w-4 h-4 mr-2" /> Crear primera historia
@@ -1393,7 +1393,7 @@ export function PagadorasYHistoriasPage() {
                 <UserPlus className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                 <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay pagadoras registradas</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 mt-1">
-                  Agrega a tus clientas para asociarles cartas e historias con marcadores visuales.
+                  Agrega a tus clientas para ordenar sus cartas e historias de forma sencilla.
                 </p>
                 <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
                   <Plus className="w-4 h-4 mr-2" /> Agregar primera pagadora
@@ -1638,7 +1638,7 @@ export function PagadorasYHistoriasPage() {
       >
         <div className="space-y-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            La IA generará una narrativa completa estructurada en párrafos. Podrás verla en el Estudio y manipular los marcadores de tus pagadoras.
+            La IA generará una historia completa por párrafos. Podrás verla en el Estudio y mover los nombres de tus pagadoras.
           </p>
 
           <div>
@@ -1660,7 +1660,7 @@ export function PagadorasYHistoriasPage() {
               id="ai_tema"
               value={editorTitulo}
               onChange={(e) => setEditorTitulo(e.target.value)}
-              placeholder="Ej: Noche lluviosa a solas / Fantasía compartida..."
+              placeholder="Ejemplo: Noche lluviosa a solas / Historia romántica..."
               required
               autoFocus
             />
