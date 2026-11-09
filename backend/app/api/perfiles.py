@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 import asyncio
+import random
 from uuid import UUID
 from typing import List
 from datetime import datetime
@@ -15,6 +16,56 @@ from app.api.auth import get_current_user
 
 
 router = APIRouter()
+
+
+TEMAS_SALUDOS_RAPIDOS = (
+    "algo gracioso que pasó durante el día",
+    "una canción que se quedó dando vueltas en la cabeza",
+    "una película o serie que sorprendió",
+    "un antojo sencillo a estas horas",
+    "un recuerdo divertido de la infancia",
+    "una curiosidad aprendida recientemente",
+    "una foto antigua encontrada por casualidad",
+    "un sueño extraño que todavía se recuerda",
+    "una costumbre pequeña que alegra el día",
+    "el sonido de la lluvia o del viento afuera",
+    "una conversación que dejó pensando",
+    "algo inesperado que salió bien hoy",
+    "un talento que gustaría aprender",
+    "la canción ideal para cerrar el día",
+    "una comida sencilla que trae buenos recuerdos",
+    "una decisión pequeña que mejoró el día",
+    "un dato curioso que cuesta creer",
+    "una palabra o expresión que causa gracia",
+    "el mejor momento de la semana hasta ahora",
+    "algo cotidiano que resultó más divertido de lo esperado",
+    "una historia familiar que siempre hace sonreír",
+    "un objeto guardado por su valor sentimental",
+    "una afición que despierta curiosidad",
+    "un olor que trae un recuerdo inmediato",
+    "una pregunta curiosa que apareció de repente",
+    "algo nuevo que se probó por primera vez",
+    "un pequeño logro reciente",
+    "una tradición que resulta especial",
+    "una casualidad difícil de olvidar",
+    "algo que gustaría volver a hacer como principiante",
+    "un momento vergonzoso que ahora causa risa",
+    "una noticia buena que alegró el día",
+)
+
+
+def _seleccionar_temas_saludos(cantidad: int) -> List[str]:
+    """Elige temas distintos sin relacionarlos con la categoría del perfil."""
+    if cantidad <= len(TEMAS_SALUDOS_RAPIDOS):
+        return random.sample(TEMAS_SALUDOS_RAPIDOS, cantidad)
+
+    temas = list(TEMAS_SALUDOS_RAPIDOS)
+    random.shuffle(temas)
+    temas.extend(
+        f"pregunta cotidiana inesperada número {numero}"
+        for numero in range(1, cantidad - len(temas) + 1)
+    )
+    return temas
 
 
 @router.post("", response_model=Perfil)
@@ -113,55 +164,42 @@ async def get_ultimos_mensajes(perfil_id: UUID, current_user: UUID = Depends(get
 
 @router.post("/generar-saludos-rapidos")
 async def generar_saludos_rapidos(current_user: UUID = Depends(get_current_user)):
-    """Genera saludos unificados en un solo recuadro para todos los perfiles + 2 extras de cuido enfocado en noche y madrugada"""
+    """Genera saludos nocturnos variados para los perfiles y dos extras de cuido."""
     perfiles = supabase_service.get_perfiles_by_usuario(current_user)
     if not perfiles:
         raise HTTPException(status_code=400, detail="Crea al menos un perfil para generar los saludos.")
 
     n = len(perfiles)
-    perfiles_desc = "\n".join([f"{i+1}. {p['nombre_perfil']}: Tono/estilo: {p.get('prompt_personalidad', '')[:160]}" for i, p in enumerate(perfiles)])
+    nombres_perfiles = [p["nombre_perfil"] for p in perfiles]
+    nombres_salida = nombres_perfiles + ["Perfil Extra 1 (Cuido)", "Perfil Extra 2 (Cuido)"]
+    temas_asignados = _seleccionar_temas_saludos(n + 2)
+    asignaciones = "\n".join(
+        f"{i}. {nombre} — TEMA EXCLUSIVO: {tema}"
+        for i, (nombre, tema) in enumerate(zip(nombres_salida, temas_asignados), start=1)
+    )
     
     system_prompt = ai_service._construir_system_prompt("Asistente experto en redacción de saludos de contacto para perfiles de chat.")
     
-    prompt = f"""Genera un DOCUMENTO COMPLETO Y UNIFICADO con exactamente {n + 2} saludos nocturnos/madrugada: uno para cada perfil registrado del usuario y obligatoriamente dos perfiles extras de cuido al final.
+    prompt = f"""Genera un DOCUMENTO COMPLETO Y UNIFICADO con exactamente {n + 2} saludos que sirvan tanto de noche como de madrugada: uno para cada perfil registrado y dos perfiles extras de cuido al final.
 
-PERFILES REGISTRADOS ({n}):
-{perfiles_desc}
-
-Y DOS PERFILES EXTRAS DE CUIDO AL FINAL (OBLIGATORIOS):
-{n + 1}. Perfil Extra (Cuido, mimo y bienestar protector)
-{n + 2}. Perfil Extra (Cuido, mimo y bienestar protector)
+PERFILES Y TEMA DIFERENTE ASIGNADO A CADA SALUDO:
+{asignaciones}
 
 REGLAS OBLIGATORIAS:
-1. HORARIO NOCHE Y MADRUGADA (OBLIGATORIO): Cada saludo debe servir tanto de noche como de madrugada. Usa frases sencillas como: "a estas horas", "si sigues despierto" o "antes de dormir".
-2. NUNCA REPETIR: Cada saludo debe tratar una idea fácil y diferente (descansar la mente, soltar la tensión del cuerpo, recordar algo gracioso, respirar profundo o pensar en algo bonito). No repitas frases entre saludos.
-3. LENGUAJE SENCILLO: Usa palabras comunes y oraciones cortas. Evita palabras rebuscadas, frases demasiado poéticas y explicaciones difíciles.
-4. FORMATO EXACTO REQUERIDO:
+1. INDEPENDENCIA DEL PERFIL (MUY IMPORTANTE): La categoría, personalidad o nombre del perfil NO decide el tema. Usa únicamente el TEMA EXCLUSIVO asignado arriba. La palabra "Cuido" solo identifica esos dos perfiles extras; NO significa que debas hablar de mimo, cuidado, bienestar, protección, masajes, descanso, tensión corporal, relajación ni tratamientos faciales.
+2. VARIEDAD REAL (MUY IMPORTANTE): Desarrolla el tema exclusivo de cada fila y no lo mezcles con el de otra. No conviertas todos los temas en reflexiones sobre relajarse, respirar, descansar la mente o cuidar el cuerpo. No repitas escenas, preguntas, comienzos ni frases entre saludos.
+3. HORARIO NOCHE Y MADRUGADA: El horario es solo el contexto, no el tema. Cada saludo debe funcionar igual de bien de noche o de madrugada. Puedes usar expresiones como "a estas horas" o "si sigues despierto", pero no afirmes que la otra persona está por dormir.
+4. LENGUAJE SENCILLO: Usa palabras comunes y oraciones cortas. Evita palabras rebuscadas, frases demasiado poéticas y explicaciones difíciles.
+5. FORMATO EXACTO REQUERIDO:
 Cada saludo debe constar obligatoriamente de:
-- Un encabezado: [Número]. [Nombre del Perfil] ([Enfoque / Perspectiva breve])
-- Párrafo 1: Escena nocturna de tranquilidad, respiro o pausa, y saludo cercano.
-- Párrafo 2: Una idea sencilla sobre descansar durante la noche o la madrugada.
-- Párrafo 3: Deseo de bienestar + pregunta abierta si sigue despierto a estas horas (ej: "¿qué haces cuando quieres que tu mente deje de dar tantas vueltas?", "¿te habías dado cuenta de cuánta tensión guardas a veces en el rostro?").
-- Doble salto de línea entre saludos.
+- Un encabezado: [Número]. [Nombre exacto del perfil] ([Enfoque breve relacionado con su tema exclusivo])
+- Párrafo 1: Saludo cercano que introduce de forma natural el tema exclusivo.
+- Párrafo 2: Anécdota, pensamiento o detalle cotidiano sobre ese mismo tema.
+- Párrafo 3: Cierre cálido y una pregunta abierta relacionada con ese tema. La pregunta debe ser distinta en cada saludo.
+- Tres párrafos por saludo y doble salto de línea entre saludos.
+- No escribas etiquetas como "Tema:", "Párrafo:" o "Pregunta:".
 
-EJEMPLO EXACTO DE LA ESTRUCTURA Y TONO REQUERIDO:
-1. Antonio (Descanso para la mente)
-
-Hay días en los que la mente necesita dejar de pensar tanto. Quise saludarte en este rato tranquilo y saber cómo estás.
-
-Esta noche decidí dejar los problemas para mañana y respirar un poco. Es una forma simple de descansar cuando el día fue pesado.
-
-Espero que estés bien por allá. Si sigues despierto, dime: ¿qué haces cuando quieres dejar de pensar tanto?
-
-2. Juan M (Soltar la tensión)
-
-Hoy noté que tenía la frente tensa y los hombros duros. Respiré profundo y pensé que era un buen momento para saludarte.
-
-Moví un poco los hombros y respiré varias veces. Algo tan simple puede ayudar cuando llega la noche y el cuerpo sigue tenso.
-
-Espero que también puedas descansar. Si sigues despierto, dime: ¿notas cuando tienes la cara o los hombros tensos?
-
-Genera TODOS los {n + 2} saludos respetando esta estructura exacta."""
+Antes de responder, verifica que los {n + 2} enfoques sean diferentes entre sí y que incluso los dos perfiles de cuido hablen de sus temas asignados, no de cuido. Genera TODOS los {n + 2} saludos respetando esta estructura exacta."""
 
     try:
         contenido = await asyncio.wait_for(

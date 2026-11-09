@@ -3,7 +3,7 @@ import {
   Copy, Loader2, Sparkles, RotateCcw,
   Heart, Plus, Trash2, Eye, BookOpen, UserPlus,
   Save, Bookmark, Edit2, Flag, Check, ChevronRight,
-  Flame, FileText, ArrowRight, ChevronLeft, Sliders,
+  Flame, FileText, ArrowRight, ChevronLeft,
   CheckCircle2, ArrowUpRight, Compass, LocateFixed, GripVertical, MousePointer2
 } from "lucide-react";
 import { api } from "../services/api";
@@ -15,9 +15,56 @@ import { Modal } from "../components/Modal";
 import { copyToClipboard, cn } from "../utils/helpers";
 
 const TIPO_CARTA_OPTIONS = [
-  { value: "romantica", label: "Romántica", desc: "Seductora, genera deseo e intimidad", icon: Heart, color: "text-rose-500 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800" },
-  { value: "sexual", label: "Sexual", desc: "Explícita, apasionada, directa", icon: Flame, color: "text-red-500 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800" },
+  { value: "romantica", label: "Romántica", desc: "Amor, deseo y conexión emocional", icon: Heart, color: "text-rose-500 bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800" },
+  { value: "sexual", label: "Sexual", desc: "Deseo intenso y fantasía para adultas", icon: Flame, color: "text-red-500 bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800" },
 ];
+
+const PROMPT_CARTA_ROMANTICA = `Genera UNA SOLA carta romántica general dirigida a una mujer adulta. Enfócate en decirle cuánto la amas, cuánto la deseas y cómo ocupa tus pensamientos. Haz que el tono sea íntimo, profundo, apasionado y natural, sin dar detalles personales concretos, nombres, lugares ni situaciones específicas.
+
+La carta debe tener EXACTAMENTE 30 párrafos. Cada párrafo debe ser sustancioso, de una extensión aproximada de tres líneas, con varias oraciones conectadas y sin párrafos demasiado cortos. Mantén un solo hilo emocional de principio a fin y evita repetir las mismas ideas o frases.
+
+No menciones que nunca se han visto ni expliques a quién va dirigida. No propongas encuentros ni planes presenciales. No uses palabras o ideas como “vernos”, “encontrarnos”, “cara a cara”, “disfrutar juntos”, “conocernos”, “viajar”, “tener una cita” o expresiones parecidas.
+
+Separa cada párrafo con una línea en blanco. No numeres los párrafos, no agregues título, encabezados, etiquetas, notas ni explicaciones. Devuelve únicamente el cuerpo de la carta.`;
+
+const PROMPT_CARTA_SEXUAL = `Genera UNA SOLA carta sexual general dirigida a una mujer adulta. Enfócate en cuánto la deseas, en la intensidad de la atracción y en las muchas cosas íntimas que imaginas hacerle. El tono debe ser ardiente, explícito, directo y apasionado, pero natural, sin nombres, lugares ni detalles personales concretos.
+
+La carta debe tener EXACTAMENTE 30 párrafos. Cada párrafo debe ser sustancioso, de una extensión aproximada de tres líneas, con varias oraciones conectadas y sin párrafos demasiado cortos. Mantén una progresión sensual clara de principio a fin y evita repetir acciones, ideas o frases.
+
+No menciones que nunca se han visto ni expliques a quién va dirigida. No propongas encuentros ni planes presenciales. No uses palabras o ideas como “vernos”, “encontrarnos”, “cara a cara”, “disfrutar juntos”, “conocernos”, “viajar”, “tener una cita” o expresiones parecidas.
+
+Separa cada párrafo con una línea en blanco. No numeres los párrafos, no agregues título, encabezados, etiquetas, notas ni explicaciones. Devuelve únicamente el cuerpo de la carta.`;
+
+const separarParrafosCarta = (contenido: string) => {
+  const limpio = contenido
+    .replace(/```(?:text|markdown)?/gi, "")
+    .replace(/```/g, "")
+    .replace(/\r\n?/g, "\n")
+    .trim();
+
+  if (!limpio) return [];
+
+  let bloques = limpio.split(/\n\s*\n+/).map((p) => p.trim()).filter(Boolean);
+
+  if (bloques.length <= 1) {
+    bloques = limpio
+      .split(/(?=^\s*(?:p[áa]rrafo\s*)?\d{1,2}\s*[.):-]\s+)/gim)
+      .map((p) => p.trim())
+      .filter(Boolean);
+  }
+
+  if (bloques.length <= 1) {
+    const lineas = limpio.split("\n").map((linea) => linea.trim()).filter(Boolean);
+    if (lineas.length >= 20) bloques = lineas;
+  }
+
+  return bloques.map((bloque) =>
+    bloque
+      .replace(/^\s*(?:p[áa]rrafo\s*)?\d{1,2}\s*[.):-]\s*/i, "")
+      .replace(/\s*\n\s*/g, " ")
+      .trim()
+  ).filter(Boolean);
+};
 
 const TIPO_HISTORIA_OPTIONS = [
   { value: "romantica", label: "Romántica", color: "bg-rose-100 dark:bg-rose-950/50 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800" },
@@ -48,9 +95,13 @@ export function PagadorasYHistoriasPage() {
   const [cartaContenido, setCartaContenido] = useState("");
   const [cartaTipo, setCartaTipo] = useState<"romantica" | "sexual">("romantica");
   const [cartaPagadora, setCartaPagadora] = useState("");
-  const [cartaParrafos, setCartaParrafos] = useState<number>(20); // Por defecto 20 párrafos
-  const [generandoCarta, setGenerandoCarta] = useState(false);
-  const [cartasGeneradasHistorial, setCartasGeneradasHistorial] = useState<string[]>([]);
+  const [cartaParrafos, setCartaParrafos] = useState<number>(30);
+  const [promptCartaRomantica, setPromptCartaRomantica] = useState(() =>
+    localStorage.getItem("prompt_carta_romantica") || PROMPT_CARTA_ROMANTICA
+  );
+  const [promptCartaSexual, setPromptCartaSexual] = useState(() =>
+    localStorage.getItem("prompt_carta_sexual") || PROMPT_CARTA_SEXUAL
+  );
   const [cartasGuardadas, setCartasGuardadas] = useState<CartaGuardada[]>([]);
   const [showSaveCartaModal, setShowSaveCartaModal] = useState(false);
   const [saveCartaTitulo, setSaveCartaTitulo] = useState("");
@@ -111,10 +162,15 @@ export function PagadorasYHistoriasPage() {
     loadPagadoras();
     loadHistorias();
     loadCartasGuardadas();
-
-    const storedHistorial = localStorage.getItem("cartas_gen_historial_" + selectedPerfilId);
-    if (storedHistorial) setCartasGeneradasHistorial(JSON.parse(storedHistorial));
   }, [selectedPerfilId]);
+
+  useEffect(() => {
+    localStorage.setItem("prompt_carta_romantica", promptCartaRomantica);
+  }, [promptCartaRomantica]);
+
+  useEffect(() => {
+    localStorage.setItem("prompt_carta_sexual", promptCartaSexual);
+  }, [promptCartaSexual]);
 
   // Cargar marcadores específicos para el documento actual (carta o historia)
   useEffect(() => {
@@ -182,38 +238,52 @@ export function PagadorasYHistoriasPage() {
     }
   };
 
-  // === GENERAR CARTA (CON 20 PÁRRAFOS POR DEFECTO O CONFIGURABLE) ===
-  const handleGenerarCarta = async () => {
-    if (!selectedPerfilId) return;
-    setGenerandoCarta(true);
-    try {
-      const historial = cartasGeneradasHistorial.slice(-3).join("\n---ANTERIOR---\n");
-      const res = await api.generarCartasPagadora(selectedPerfilId, {
-        pagadora: cartaPagadora || "general",
-        tipo: cartaTipo,
-        cantidad: 1,
-        parrafos: cartaParrafos,
-        instrucciones: historial ? "EVITA REPETIR ESTAS CARTAS ANTERIORES:\n" + historial : "",
-      });
-      const newId = "gen_carta_" + Date.now();
-      setCurrentCartaGenId(newId);
-      setCartaContenido(res.contenido);
-      const nuevas = [...cartasGeneradasHistorial, res.contenido].slice(-10);
-      setCartasGeneradasHistorial(nuevas);
-      localStorage.setItem("cartas_gen_historial_" + selectedPerfilId, JSON.stringify(nuevas));
-      success(`Carta de ${cartaParrafos} párrafos generada`);
-    } catch (e: any) {
-      showError(e.response?.data?.detail || "Error al generar carta");
-    } finally {
-      setGenerandoCarta(false);
+  const parrafosCartaPegada = separarParrafosCarta(cartaContenido);
+
+  const handlePrepararCarta = () => {
+    if (!cartaContenido.trim()) {
+      showError("Pega primero la carta generada");
+      return;
+    }
+
+    const parrafosSeparados = separarParrafosCarta(cartaContenido);
+    if (parrafosSeparados.length === 0) {
+      showError("No fue posible identificar los párrafos de la carta");
+      return;
+    }
+
+    const contenidoNormalizado = parrafosSeparados.join("\n\n");
+    const docId = "carta_pegada_" + Date.now();
+    setCartaContenido(contenidoNormalizado);
+    setCartaParrafos(parrafosSeparados.length);
+    setCurrentCartaGenId(docId);
+    setEstudioDocId(docId);
+    setEditingHistoria(null);
+    setEditorTitulo(`Carta ${cartaTipo === "romantica" ? "Romántica" : "Sexual"} (${parrafosSeparados.length} párrafos)`);
+    setEditorContent(contenidoNormalizado);
+    setEditorTipo(cartaTipo === "sexual" ? "sexual" : "romantica");
+    setEditorPagadoraAsociada(cartaPagadora || "");
+    setActiveTab("estudio_lector");
+
+    if (parrafosSeparados.length === 30) {
+      success("Carta separada en 30 párrafos y lista para organizar");
+    } else {
+      success(`Carta separada en ${parrafosSeparados.length} párrafos; el prompt solicita 30`);
     }
   };
 
   // === GUARDAR CARTA PARA REUTILIZAR ===
   const openSaveCartaModal = () => {
-    if (!cartaContenido) return;
-    setSaveCartaTitulo(`Carta ${cartaTipo === "romantica" ? "Romántica" : "Sexual"} (${cartaParrafos} párrafos) - ${new Date().toLocaleDateString()}`);
-    setSaveCartaPagadora(cartaPagadora || "");
+    const desdeEstudio = activeTab === "estudio_lector" && estudioDocId.startsWith("carta_");
+    const contenido = desdeEstudio ? editorContent : cartaContenido;
+    const tipo = desdeEstudio && editorTipo === "sexual" ? "sexual" : cartaTipo;
+    const cantidadParrafos = separarParrafosCarta(contenido).length;
+    if (!contenido.trim()) return;
+    setCartaContenido(contenido);
+    setCartaTipo(tipo);
+    setCartaParrafos(cantidadParrafos);
+    setSaveCartaTitulo(`Carta ${tipo === "romantica" ? "Romántica" : "Sexual"} (${cantidadParrafos} párrafos) - ${new Date().toLocaleDateString()}`);
+    setSaveCartaPagadora((desdeEstudio ? editorPagadoraAsociada : cartaPagadora) || "");
     setShowSaveCartaModal(true);
   };
 
@@ -536,7 +606,7 @@ export function PagadorasYHistoriasPage() {
             Estudio (Cartas & Historias)
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
-            Generador de cartas de 20 párrafos, historias y seguimiento de pagadoras en tiempo real
+            Prompts editables, cartas separadas por párrafos y seguimiento visual de pagadoras
           </p>
         </div>
         <div className="flex flex-col w-full md:w-64">
@@ -560,7 +630,7 @@ export function PagadorasYHistoriasPage() {
       <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden">
         <div className="flex border-b border-gray-100 dark:border-gray-800 overflow-x-auto">
           {[
-            { id: "cartas", label: "Cartas", emoji: "💌", desc: "Generador (20 párrafos) & Guardadas", count: cartasGuardadas.length },
+            { id: "cartas", label: "Cartas", emoji: "💌", desc: "Prompts, pegado y guardadas", count: cartasGuardadas.length },
             { id: "estudio_lector", label: "Estudio & Marcadores", emoji: "🎯", desc: "Seguimiento visual de pagadoras", activeBadge: parrafos.length > 0 ? `${parrafos.length} párr.` : undefined },
             { id: "historias", label: "Historias Guardadas", emoji: "📚", desc: "Biblioteca de narrativas", count: historias.length },
             { id: "pagadoras", label: "Pagadoras", emoji: "👥", desc: "Gestión de clientas", count: pagadoras.length },
@@ -595,203 +665,191 @@ export function PagadorasYHistoriasPage() {
         </div>
 
         {/* ============================================================ */}
-        {/* TAB 1: GENERADOR DE CARTAS (20 PÁRRAFOS POR DEFECTO + BANCO) */}
+        {/* TAB 1: PROMPTS Y PREPARACIÓN MANUAL DE CARTAS */}
         {/* ============================================================ */}
         {activeTab === "cartas" && (
           <div className="p-6 space-y-8">
-            <div className="max-w-4xl mx-auto space-y-6">
-              {/* Panel de Generación */}
-              <div className="bg-gradient-to-br from-rose-50/60 to-purple-50/60 dark:from-rose-950/20 dark:to-purple-950/20 p-6 rounded-2xl border border-rose-100/80 dark:border-rose-900/40 space-y-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                    <Sparkles className="w-5 h-5 text-rose-500" />
-                    Generar Carta Extensa (Romántica o Sexual)
-                  </h2>
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
-                    Defecto: 20 párrafos
-                  </span>
+            <div className="max-w-5xl mx-auto space-y-6">
+              <div className="overflow-hidden rounded-3xl border border-purple-100 bg-gradient-to-br from-white via-rose-50/40 to-purple-50/70 shadow-sm dark:border-purple-900/50 dark:from-gray-900 dark:via-rose-950/10 dark:to-purple-950/20">
+                <div className="border-b border-purple-100 px-6 py-5 dark:border-purple-900/40">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700 dark:bg-purple-900/50 dark:text-purple-300">
+                        <Sparkles className="h-3.5 w-3.5" /> Flujo manual · 30 párrafos
+                      </div>
+                      <h2 className="text-xl font-black text-gray-950 dark:text-white">Prepara y organiza tus cartas</h2>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        Copia un prompt, genera la carta donde prefieras y pégala aquí para separarla automáticamente.
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-1 rounded-2xl border border-white/80 bg-white/80 p-1.5 text-[11px] font-bold text-gray-500 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 dark:text-gray-400">
+                      <span className="rounded-xl bg-rose-50 px-3 py-2 text-center text-rose-700 dark:bg-rose-950/40 dark:text-rose-300">1 · Copia</span>
+                      <span className="rounded-xl px-3 py-2 text-center">2 · Pega</span>
+                      <span className="rounded-xl px-3 py-2 text-center">3 · Organiza</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid sm:grid-cols-2 gap-4">
-                  {/* Selector de Tipo */}
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
-                      Tipo de carta
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-7 p-6">
+                  <section aria-labelledby="prompts-cartas-title">
+                    <div className="mb-3 flex items-end justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-500">Paso 1</p>
+                        <h3 id="prompts-cartas-title" className="text-base font-bold text-gray-900 dark:text-gray-100">Elige, edita y copia el prompt</h3>
+                      </div>
+                      <span className="text-xs text-gray-400">Tus cambios se guardan automáticamente</span>
+                    </div>
+
+                    <div className="grid gap-4 lg:grid-cols-2">
                       {TIPO_CARTA_OPTIONS.map((opt) => {
                         const Icon = opt.icon;
+                        const isRomantica = opt.value === "romantica";
                         const isSelected = cartaTipo === opt.value;
+                        const promptValue = isRomantica ? promptCartaRomantica : promptCartaSexual;
+                        const setPromptValue = isRomantica ? setPromptCartaRomantica : setPromptCartaSexual;
+                        const defaultPrompt = isRomantica ? PROMPT_CARTA_ROMANTICA : PROMPT_CARTA_SEXUAL;
+
                         return (
-                          <button
+                          <article
                             key={opt.value}
-                            onClick={() => setCartaTipo(opt.value as any)}
                             className={cn(
-                              "p-3.5 rounded-xl border-2 text-left transition-all flex flex-col justify-between",
+                              "rounded-2xl border-2 bg-white p-4 transition-all dark:bg-gray-900",
                               isSelected
-                                ? "border-rose-500 bg-white dark:bg-gray-900 shadow-sm"
-                                : "border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 hover:border-gray-300 dark:hover:border-gray-700"
+                                ? isRomantica
+                                  ? "border-rose-400 shadow-md shadow-rose-100/60 dark:border-rose-700 dark:shadow-none"
+                                  : "border-red-400 shadow-md shadow-red-100/60 dark:border-red-700 dark:shadow-none"
+                                : "border-gray-100 dark:border-gray-800"
                             )}
                           >
-                            <div className="flex items-center gap-2 mb-1">
-                              <Icon className={cn("w-4 h-4", isSelected ? "text-rose-500" : "text-gray-400")} />
-                              <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm">{opt.label}</span>
+                            <button
+                              type="button"
+                              onClick={() => setCartaTipo(opt.value as "romantica" | "sexual")}
+                              className="mb-3 flex w-full items-center justify-between text-left"
+                            >
+                              <span className="flex items-center gap-3">
+                                <span className={cn("flex h-10 w-10 items-center justify-center rounded-xl", opt.color)}>
+                                  <Icon className="h-5 w-5" />
+                                </span>
+                                <span>
+                                  <span className="block text-sm font-black text-gray-900 dark:text-gray-100">Carta {opt.label}</span>
+                                  <span className="block text-xs text-gray-500 dark:text-gray-400">{opt.desc}</span>
+                                </span>
+                              </span>
+                              {isSelected && <CheckCircle2 className="h-5 w-5 text-purple-600 dark:text-purple-400" />}
+                            </button>
+
+                            <Textarea
+                              value={promptValue}
+                              onFocus={() => setCartaTipo(opt.value as "romantica" | "sexual")}
+                              onChange={(e) => setPromptValue(e.target.value)}
+                              rows={12}
+                              aria-label={`Prompt para carta ${opt.label.toLowerCase()}`}
+                              className="resize-y font-mono text-xs leading-relaxed"
+                            />
+
+                            <div className="mt-3 flex items-center gap-2">
+                              <Button
+                                type="button"
+                                size="sm"
+                                onClick={() => {
+                                  setCartaTipo(opt.value as "romantica" | "sexual");
+                                  handleCopy(promptValue);
+                                }}
+                                className={cn(
+                                  "flex-1 text-xs font-bold text-white",
+                                  isRomantica ? "bg-rose-600 hover:bg-rose-700" : "bg-red-600 hover:bg-red-700"
+                                )}
+                              >
+                                <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar prompt {opt.label.toLowerCase()}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setPromptValue(defaultPrompt)}
+                                title="Restaurar prompt original"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                              </Button>
                             </div>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">{opt.desc}</span>
-                          </button>
+                          </article>
                         );
                       })}
                     </div>
-                  </div>
+                  </section>
 
-                  {/* Selector de Pagadora */}
-                  <div>
-                    <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 block">
-                      Pagadora Asociada (opcional)
-                    </label>
-                    <select
-                      value={cartaPagadora}
-                      onChange={(e) => setCartaPagadora(e.target.value)}
-                      className="input h-[62px]"
-                    >
-                      <option value="">-- General (Cualquier clienta) --</option>
-                      {pagadoras.map((p) => (
-                        <option key={p} value={p}>
-                          {p}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                  <section className="rounded-2xl border border-purple-200 bg-white p-5 shadow-sm dark:border-purple-800 dark:bg-gray-900" aria-labelledby="pegar-carta-title">
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.2em] text-purple-500">Paso 2</p>
+                        <h3 id="pegar-carta-title" className="text-base font-bold text-gray-900 dark:text-gray-100">Pega aquí la carta terminada</h3>
+                        <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Detectamos los saltos dobles, la numeración y otros formatos comunes.</p>
+                      </div>
+                      <span className={cn(
+                        "rounded-full border px-3 py-1 text-xs font-black",
+                        parrafosCartaPegada.length === 30
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                          : cartaContenido
+                            ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                            : "border-gray-200 bg-gray-50 text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400"
+                      )}>
+                        {parrafosCartaPegada.length || 0} / 30 párrafos detectados
+                      </span>
+                    </div>
 
-                {/* SELECTOR DE LONGITUD DE PÁRRAFOS (DEFECTO 20) */}
-                <div className="bg-white dark:bg-gray-900/80 p-4 rounded-xl border border-rose-100 dark:border-rose-900/40">
-                  <div className="flex items-center justify-between mb-2">
-                    <Label className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sliders className="w-3.5 h-3.5 text-rose-500" />
-                      Longitud de la carta: <span className="text-purple-600 dark:text-purple-400 font-extrabold text-sm">{cartaParrafos} párrafos</span>
-                    </Label>
-                    <span className="text-xs text-gray-400">
-                      (Mínimo 3, por defecto 20, máximo 40)
-                    </span>
-                  </div>
+                    <Textarea
+                      value={cartaContenido}
+                      onChange={(e) => setCartaContenido(e.target.value)}
+                      rows={14}
+                      placeholder="Pega aquí los 30 párrafos generados..."
+                      className="resize-y text-sm leading-relaxed"
+                    />
 
-                  {/* Botones rápidos de párrafos */}
-                  <div className="flex flex-wrap items-center gap-2 mb-3">
-                    {[10, 15, 20, 25, 30].map((num) => (
-                      <button
-                        key={num}
+                    <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1.5fr]">
+                      <div>
+                        <Label htmlFor="pagadora-carta-pegada" className="text-xs font-bold">Pagadora inicial (opcional)</Label>
+                        <select
+                          id="pagadora-carta-pegada"
+                          value={cartaPagadora}
+                          onChange={(e) => setCartaPagadora(e.target.value)}
+                          className="input mt-1"
+                        >
+                          <option value="">Carta general</option>
+                          {pagadoras.map((p) => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </div>
+
+                      <Button
                         type="button"
-                        onClick={() => setCartaParrafos(num)}
-                        className={cn(
-                          "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all border",
-                          cartaParrafos === num
-                            ? "bg-purple-600 text-white border-purple-600 shadow-xs"
-                            : "bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-                        )}
+                        onClick={handlePrepararCarta}
+                        disabled={!cartaContenido.trim()}
+                        className="mt-auto h-11 bg-gradient-to-r from-purple-600 to-rose-600 font-bold text-white shadow-sm hover:from-purple-700 hover:to-rose-700"
                       >
-                        {num} párrafos {num === 20 && "(por defecto)"}
-                      </button>
-                    ))}
-                  </div>
+                        Separar párrafos y abrir marcadores
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
 
-                  <input
-                    type="range"
-                    min={3}
-                    max={40}
-                    step={1}
-                    value={cartaParrafos}
-                    onChange={(e) => setCartaParrafos(parseInt(e.target.value, 10))}
-                    className="w-full accent-purple-600 dark:accent-purple-400 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
-                  />
+                    {cartaContenido && (
+                      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {parrafosCartaPegada.length === 30
+                            ? "La carta está lista: al continuar podrás copiar cada párrafo y mover las pagadoras."
+                            : "Puedes continuar aunque no sean 30; revisa el resultado en el estudio."}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleCopy(cartaContenido)} className="text-xs">
+                            <Copy className="mr-1 h-3.5 w-3.5" /> Copiar carta
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setCartaContenido("")} className="text-xs text-red-600 dark:text-red-400">
+                            <Trash2 className="mr-1 h-3.5 w-3.5" /> Limpiar
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </section>
                 </div>
-
-                <Button
-                  onClick={handleGenerarCarta}
-                  disabled={generandoCarta}
-                  className="w-full bg-gradient-to-r from-rose-600 to-purple-600 hover:from-rose-700 hover:to-purple-700 text-white py-3.5 text-base shadow-sm font-semibold"
-                >
-                  {generandoCarta ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                      Generando carta profunda de {cartaParrafos} párrafos con IA...
-                    </>
-                  ) : (
-                    <>
-                      <Heart className="w-5 h-5 mr-2" />
-                      Generar Carta {cartaTipo === "romantica" ? "Romántica" : "Sexual"} ({cartaParrafos} Párrafos)
-                    </>
-                  )}
-                </Button>
               </div>
-
-              {/* Resultado Generado con opción de Guardar para Reutilizar */}
-              {cartaContenido && (
-                <div className="bg-white dark:bg-gray-900 border-2 border-rose-200 dark:border-rose-900/60 rounded-2xl overflow-hidden shadow-sm">
-                  <div className="flex flex-wrap items-center justify-between p-4 bg-rose-50/50 dark:bg-rose-950/30 border-b border-rose-100 dark:border-rose-900/40 gap-3">
-                    <div className="flex items-center gap-2">
-                      <span className="p-1.5 rounded-lg bg-rose-500 text-white">
-                        <Heart className="w-4 h-4" />
-                      </span>
-                      <span className="font-bold text-gray-900 dark:text-gray-100">
-                        Carta Generada
-                      </span>
-                      <span className="text-xs px-2.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300 font-semibold capitalize">
-                        {cartaTipo}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="primary"
-                        size="sm"
-                        onClick={openSaveCartaModal}
-                        className="bg-purple-600 hover:bg-purple-700 text-white text-xs"
-                      >
-                        <Save className="w-3.5 h-3.5 mr-1.5" />
-                        Guardar para Reutilizar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const docId = currentCartaGenId || ("gen_carta_" + Date.now());
-                          setEstudioDocId(docId);
-                          setEditingHistoria(null);
-                          setEditorTitulo(`Carta ${cartaTipo === "romantica" ? "Romántica" : "Sexual"} (${cartaParrafos} párrafos)`);
-                          setEditorContent(cartaContenido);
-                          setEditorTipo(cartaTipo === "sexual" ? "sexual" : "romantica");
-                          setEditorPagadoraAsociada(cartaPagadora || "");
-                          setActiveTab("estudio_lector");
-                        }}
-                        className="text-xs text-purple-600 dark:text-purple-400"
-                      >
-                        <Compass className="w-3.5 h-3.5 mr-1" />
-                        Abrir en Estudio & Marcadores
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => handleCopy(cartaContenido)} className="text-xs">
-                        <Copy className="w-3.5 h-3.5 mr-1" />
-                        Copiar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleGenerarCarta}
-                        disabled={generandoCarta}
-                        title="Generar nueva variación"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="p-6 max-h-[50vh] overflow-y-auto">
-                    <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed font-sans">
-                      {cartaContenido}
-                    </p>
-                  </div>
-                </div>
-              )}
 
               {/* BANCO DE CARTAS REUTILIZABLES */}
               <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
@@ -815,7 +873,7 @@ export function PagadorasYHistoriasPage() {
                     <Heart className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                     <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Aún no tienes cartas guardadas</p>
                     <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      Genera una carta de 20 párrafos arriba y haz clic en "Guardar para Reutilizar".
+                      Copia un prompt, pega la carta y guárdala desde el Estudio para reutilizarla.
                     </p>
                   </div>
                 ) : (
@@ -909,6 +967,17 @@ export function PagadorasYHistoriasPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                {estudioDocId.startsWith("carta_") && editorContent.trim() && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openSaveCartaModal}
+                    className="text-xs text-rose-600 dark:text-rose-400"
+                  >
+                    <Bookmark className="w-3.5 h-3.5 mr-1.5" />
+                    Guardar en banco
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   size="sm"
@@ -1488,7 +1557,7 @@ export function PagadorasYHistoriasPage() {
               id="carta_save_titulo"
               value={saveCartaTitulo}
               onChange={(e) => setSaveCartaTitulo(e.target.value)}
-              placeholder="Ej: Carta romántica profunda de 20 párrafos..."
+              placeholder="Ej: Carta romántica profunda de 30 párrafos..."
               required
               autoFocus
             />
