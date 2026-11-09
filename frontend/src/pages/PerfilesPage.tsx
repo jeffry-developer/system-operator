@@ -8,6 +8,8 @@ import { Input, Label, Textarea } from '../components/Input';
 import { Perfil } from '../types';
 import { cn, copyToClipboard } from '../utils/helpers';
 
+const SALUDOS_STORAGE_VERSION = 'temas-variados-v3';
+
 export function PerfilesPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
   const [loading, setLoading] = useState(true);
@@ -42,8 +44,14 @@ export function PerfilesPage() {
 
   useEffect(() => {
     fetchPerfiles();
-    const storedDoc = localStorage.getItem('saludos_documento_unificado');
-    if (storedDoc) setSaludosDocumento(storedDoc);
+    const storedVersion = localStorage.getItem('saludos_documento_version');
+    if (storedVersion === SALUDOS_STORAGE_VERSION) {
+      const storedDoc = localStorage.getItem('saludos_documento_unificado');
+      if (storedDoc) setSaludosDocumento(storedDoc);
+    } else {
+      localStorage.removeItem('saludos_documento_unificado');
+      localStorage.setItem('saludos_documento_version', SALUDOS_STORAGE_VERSION);
+    }
   }, []);
 
   const resetForm = () => {
@@ -121,12 +129,14 @@ export function PerfilesPage() {
           setSaludosDocumento(data.documento_completo);
           setSaludosIndividuales(data.saludos || []);
           localStorage.setItem('saludos_documento_unificado', data.documento_completo);
+          localStorage.setItem('saludos_documento_version', SALUDOS_STORAGE_VERSION);
         } else if (Array.isArray(data)) {
           // Si vino array antiguo
           const doc = data.map((s: any, i: number) => `${i + 1}. ${s.nombre}\n\n${s.texto}`).join('\n\n');
           setSaludosDocumento(doc);
           setSaludosIndividuales(data);
           localStorage.setItem('saludos_documento_unificado', doc);
+          localStorage.setItem('saludos_documento_version', SALUDOS_STORAGE_VERSION);
         }
       }
       success('Saludos unificados generados para noche y madrugada');

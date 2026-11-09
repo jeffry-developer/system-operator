@@ -632,7 +632,7 @@ export function PagadorasYHistoriasPage() {
           {[
             { id: "cartas", label: "Cartas", emoji: "💌", desc: "Prompts, pegado y guardadas", count: cartasGuardadas.length },
             { id: "estudio_lector", label: "Estudio & Marcadores", emoji: "🎯", desc: "Seguimiento visual de pagadoras", activeBadge: parrafos.length > 0 ? `${parrafos.length} párr.` : undefined },
-            { id: "historias", label: "Historias Guardadas", emoji: "📚", desc: "Biblioteca de narrativas", count: historias.length },
+            { id: "historias", label: "Historias Guardadas", emoji: "📚", desc: "Cartas e historias guardadas", count: historias.length + cartasGuardadas.length },
             { id: "pagadoras", label: "Pagadoras", emoji: "👥", desc: "Gestión de clientas", count: pagadoras.length },
           ].map((tab) => (
             <button
@@ -851,96 +851,6 @@ export function PagadorasYHistoriasPage() {
                 </div>
               </div>
 
-              {/* BANCO DE CARTAS REUTILIZABLES */}
-              <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
-                      <Bookmark className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                      Banco de Cartas Guardadas (Reutilizables)
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Tus cartas guardadas listas para reutilizar, copiar o cargar en el visor de historias
-                    </p>
-                  </div>
-                  <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/40 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800">
-                    {cartasGuardadas.length} {cartasGuardadas.length === 1 ? "carta" : "cartas"}
-                  </span>
-                </div>
-
-                {cartasGuardadas.length === 0 ? (
-                  <div className="text-center py-10 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
-                    <Heart className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                    <p className="text-sm text-gray-500 dark:text-gray-400 font-medium">Aún no tienes cartas guardadas</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                      Copia un prompt, pega la carta y guárdala desde el Estudio para reutilizarla.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {cartasGuardadas.map((c) => {
-                      const isSexual = c.tipo === "sexual";
-                      return (
-                        <div
-                          key={c.id}
-                          className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-100 dark:border-gray-800 hover:border-purple-300 dark:hover:border-purple-800 shadow-xs transition-all flex flex-col justify-between"
-                        >
-                          <div>
-                            <div className="flex items-start justify-between gap-2 mb-2">
-                              <span
-                                className={cn(
-                                  "px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider",
-                                  isSexual
-                                    ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
-                                    : "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300"
-                                )}
-                              >
-                                {c.tipo}
-                              </span>
-                              {c.pagadora && (
-                                <span className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
-                                  <UserPlus className="w-3 h-3 text-purple-500" /> {c.pagadora}
-                                </span>
-                              )}
-                            </div>
-                            <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-2">{c.titulo}</h4>
-                            <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-4 leading-relaxed mb-4">
-                              {c.contenido}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleCopy(c.contenido)}
-                              className="flex-1 text-xs"
-                            >
-                              <Copy className="w-3.5 h-3.5 mr-1" /> Copiar
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleCargarCartaEnEstudio(c)}
-                              className="flex-1 text-xs text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30"
-                            >
-                              <Compass className="w-3.5 h-3.5 mr-1" /> Ver en Estudio
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteCartaGuardada(c.id)}
-                              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
             </div>
           </div>
         )}
@@ -1343,10 +1253,10 @@ export function PagadorasYHistoriasPage() {
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  Historias Guardadas
+                  Historias y Cartas Guardadas
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Selecciona una historia para abrirla en el Estudio y mover los nombres de tus pagadoras
+                  Toda tu biblioteca en un solo lugar, lista para copiar o abrir en el Estudio
                 </p>
               </div>
               <Button
@@ -1355,6 +1265,113 @@ export function PagadorasYHistoriasPage() {
               >
                 <Plus className="w-4 h-4 mr-1.5" /> Nueva Historia con IA
               </Button>
+            </div>
+
+            {/* BANCO DE CARTAS REUTILIZABLES */}
+            <section className="rounded-2xl border border-purple-100 bg-purple-50/30 p-5 dark:border-purple-900/50 dark:bg-purple-950/10">
+              <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                <div>
+                  <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                    <Bookmark className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                    Cartas Guardadas
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Cartas pegadas y guardadas para reutilizar, copiar o continuar con marcadores
+                  </p>
+                </div>
+                <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 bg-white dark:bg-gray-900 px-3 py-1 rounded-full border border-purple-200 dark:border-purple-800">
+                  {cartasGuardadas.length} {cartasGuardadas.length === 1 ? "carta" : "cartas"}
+                </span>
+              </div>
+
+              {cartasGuardadas.length === 0 ? (
+                <div className="text-center py-8 bg-white/70 dark:bg-gray-900/70 rounded-2xl border border-dashed border-purple-200 dark:border-purple-800">
+                  <Heart className="w-10 h-10 text-purple-200 dark:text-purple-800 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600 dark:text-gray-300 font-medium">Aún no tienes cartas guardadas</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                    Pega una carta en la pestaña Cartas y guárdala desde el Estudio.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {cartasGuardadas.map((c) => {
+                    const isSexual = c.tipo === "sexual";
+                    return (
+                      <article
+                        key={c.id}
+                        className="bg-white dark:bg-gray-900 rounded-xl p-5 border border-gray-100 dark:border-gray-800 hover:border-purple-300 dark:hover:border-purple-800 shadow-xs transition-all flex flex-col justify-between"
+                      >
+                        <div>
+                          <div className="flex items-start justify-between gap-2 mb-2">
+                            <span
+                              className={cn(
+                                "px-2.5 py-0.5 rounded-full text-xs font-semibold uppercase tracking-wider",
+                                isSexual
+                                  ? "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+                                  : "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-300"
+                              )}
+                            >
+                              {c.tipo}
+                            </span>
+                            {c.pagadora && (
+                              <span className="text-xs font-medium text-gray-600 dark:text-gray-400 flex items-center gap-1">
+                                <UserPlus className="w-3 h-3 text-purple-500" /> {c.pagadora}
+                              </span>
+                            )}
+                          </div>
+                          <h4 className="font-bold text-gray-900 dark:text-gray-100 text-sm mb-2">{c.titulo}</h4>
+                          <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-4 leading-relaxed mb-4">
+                            {c.contenido}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2 pt-3 border-t border-gray-100 dark:border-gray-800">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCopy(c.contenido)}
+                            className="flex-1 text-xs"
+                          >
+                            <Copy className="w-3.5 h-3.5 mr-1" /> Copiar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleCargarCartaEnEstudio(c)}
+                            className="flex-1 text-xs text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30"
+                          >
+                            <Compass className="w-3.5 h-3.5 mr-1" /> Ver en Estudio
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteCartaGuardada(c.id)}
+                            className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20"
+                            title="Eliminar carta guardada"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <div className="flex items-center justify-between border-t border-gray-100 pt-5 dark:border-gray-800">
+              <div>
+                <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                  Historias Guardadas
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Narrativas guardadas en el servidor para este perfil
+                </p>
+              </div>
+              <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                {historias.length} {historias.length === 1 ? "historia" : "historias"}
+              </span>
             </div>
 
             {historias.length === 0 ? (

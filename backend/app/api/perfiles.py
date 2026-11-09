@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 import asyncio
 import random
+import re
 from uuid import UUID
 from typing import List
 from datetime import datetime
@@ -53,6 +54,13 @@ TEMAS_SALUDOS_RAPIDOS = (
     "una noticia buena que alegró el día",
 )
 
+PATRON_TEMATICA_REPETITIVA = re.compile(
+    r"\b(?:descans\w*|relaj\w*|respir\w*|tensi[oó]n|mimos?|cuidad\w*|bienestar|"
+    r"protecci[oó]n|seren\w*|tranquil\w*|masaj\w*|rostro|hombros?|cuello|cuerpo|"
+    r"mente|alivio|pausa)\b",
+    re.IGNORECASE,
+)
+
 
 def _seleccionar_temas_saludos(cantidad: int) -> List[str]:
     """Elige temas distintos sin relacionarlos con la categoría del perfil."""
@@ -66,6 +74,77 @@ def _seleccionar_temas_saludos(cantidad: int) -> List[str]:
         for numero in range(1, cantidad - len(temas) + 1)
     )
     return temas
+
+
+def _extraer_bloques_saludos(contenido: str) -> List[str]:
+    patron_bloque = re.compile(r"(?:^|\n\n)(?=\d+\.\s+)", re.MULTILINE)
+    return [bloque.strip() for bloque in patron_bloque.split(contenido) if bloque.strip()]
+
+
+def _validar_saludos_generados(
+    contenido: str,
+    nombres: List[str],
+    temas: List[str],
+) -> List[str]:
+    """Comprueba cantidad, encabezados, párrafos y ausencia del patrón repetitivo."""
+    errores = []
+    bloques = _extraer_bloques_saludos(contenido)
+
+    if len(bloques) != len(nombres):
+        errores.append(f"se generaron {len(bloques)} saludos y se esperaban {len(nombres)}")
+        return errores
+
+    for indice, (bloque, nombre, tema) in enumerate(zip(bloques, nombres, temas), start=1):
+        lineas = bloque.splitlines()
+        titulo = lineas[0].strip() if lineas else ""
+        titulo_esperado = f"{indice}. {nombre} ({tema})"
+        if titulo.casefold() != titulo_esperado.casefold():
+            errores.append(f"el saludo {indice} no usó el encabezado exacto requerido")
+
+        cuerpo = "\n".join(lineas[1:]).strip()
+        parrafos = [p.strip() for p in re.split(r"\n\s*\n+", cuerpo) if p.strip()]
+        if len(parrafos) != 3:
+            errores.append(f"el saludo {indice} no tiene exactamente 3 párrafos")
+
+        coincidencias = sorted({m.group(0).lower() for m in PATRON_TEMATICA_REPETITIVA.finditer(bloque)})
+        if coincidencias:
+            errores.append(
+                f"el saludo {indice} volvió a la temática repetitiva: {', '.join(coincidencias)}"
+            )
+
+    return errores
+
+
+def _generar_saludos_validados(
+    system_prompt: str,
+    prompt: str,
+    nombres: List[str],
+    temas: List[str],
+) -> str:
+    """Regenera en lugar de entregar saludos que vuelvan al patrón anterior."""
+    prompt_actual = prompt
+    errores = []
+
+    for intento in range(3):
+        contenido = ai_service._llamar_ia(system_prompt, prompt_actual)
+        contenido = ai_service._sanitizar_texto(contenido.strip())
+        errores = _validar_saludos_generados(contenido, nombres, temas)
+        if not errores:
+            return contenido
+
+        detalle = "\n- ".join(errores)
+        prompt_actual = f"""{prompt}
+
+TU RESPUESTA ANTERIOR FUE INVÁLIDA Y DEBES CREAR OTRA DESDE CERO.
+Problemas detectados:
+- {detalle}
+
+No reutilices ninguna idea de la respuesta anterior. Cumple literalmente cada encabezado y cada tema asignado."""
+
+    raise ValueError(
+        "La IA insistió en repetir las temáticas anteriores después de 3 intentos. "
+        "Vuelve a renovar los saludos. Últimos problemas: " + "; ".join(errores)
+    )
 
 
 @router.post("", response_model=Perfil)
@@ -177,6 +256,10 @@ async def generar_saludos_rapidos(current_user: UUID = Depends(get_current_user)
         f"{i}. {nombre} — TEMA EXCLUSIVO: {tema}"
         for i, (nombre, tema) in enumerate(zip(nombres_salida, temas_asignados), start=1)
     )
+    encabezados_requeridos = "\n".join(
+        f"{i}. {nombre} ({tema})"
+        for i, (nombre, tema) in enumerate(zip(nombres_salida, temas_asignados), start=1)
+    )
     
     system_prompt = ai_service._construir_system_prompt("Asistente experto en redacción de saludos de contacto para perfiles de chat.")
     
@@ -192,26 +275,35 @@ REGLAS OBLIGATORIAS:
 4. LENGUAJE SENCILLO: Usa palabras comunes y oraciones cortas. Evita palabras rebuscadas, frases demasiado poéticas y explicaciones difíciles.
 5. FORMATO EXACTO REQUERIDO:
 Cada saludo debe constar obligatoriamente de:
-- Un encabezado: [Número]. [Nombre exacto del perfil] ([Enfoque breve relacionado con su tema exclusivo])
+- El encabezado exacto indicado abajo. No cambies ninguna palabra, no resumas el tema y no reemplaces el nombre de los perfiles extra.
 - Párrafo 1: Saludo cercano que introduce de forma natural el tema exclusivo.
 - Párrafo 2: Anécdota, pensamiento o detalle cotidiano sobre ese mismo tema.
 - Párrafo 3: Cierre cálido y una pregunta abierta relacionada con ese tema. La pregunta debe ser distinta en cada saludo.
 - Tres párrafos por saludo y doble salto de línea entre saludos.
 - No escribas etiquetas como "Tema:", "Párrafo:" o "Pregunta:".
 
+ENCABEZADOS LITERALES Y OBLIGATORIOS:
+{encabezados_requeridos}
+
+VOCABULARIO PROHIBIDO EN TODA LA RESPUESTA:
+No uses ninguna variante de descanso, relajación, respiración, tensión, mimo, cuidado, bienestar, protección, serenidad, tranquilidad, masaje, rostro, hombros, cuello, cuerpo, mente, alivio o pausa.
+
 Antes de responder, verifica que los {n + 2} enfoques sean diferentes entre sí y que incluso los dos perfiles de cuido hablen de sus temas asignados, no de cuido. Genera TODOS los {n + 2} saludos respetando esta estructura exacta."""
 
     try:
         contenido = await asyncio.wait_for(
-            asyncio.to_thread(ai_service._llamar_ia, system_prompt, prompt),
-            timeout=90.0
+            asyncio.to_thread(
+                _generar_saludos_validados,
+                system_prompt,
+                prompt,
+                nombres_salida,
+                temas_asignados,
+            ),
+            timeout=180.0,
         )
-        contenido = ai_service._sanitizar_texto(contenido.strip())
         
         # Parsear los bloques individuales para visualización flexible
-        import re
-        patron_bloque = re.compile(r'(?:^|\n\n)(?=\d+\.\s+)', re.MULTILINE)
-        partes = [b.strip() for b in patron_bloque.split(contenido) if b.strip()]
+        partes = _extraer_bloques_saludos(contenido)
         
         saludos_individuales = []
         for p in partes:
