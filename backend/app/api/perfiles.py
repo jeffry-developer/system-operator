@@ -106,7 +106,7 @@ def _validar_saludos_generados(
         if len(parrafos) != 3:
             errores.append(f"el saludo {indice} no tiene exactamente 3 párrafos")
 
-        coincidencias = sorted({m.group(0).lower() for m in PATRON_TEMATICA_REPETITIVA.finditer(bloque)})
+        coincidencias = sorted({m.group(0).lower() for m in PATRON_TEMATICA_REPETITIVA.finditer(cuerpo)})
         if coincidencias:
             errores.append(
                 f"el saludo {indice} volvió a la temática repetitiva: {', '.join(coincidencias)}"
@@ -115,36 +115,69 @@ def _validar_saludos_generados(
     return errores
 
 
+def _crear_saludos_fallback(nombres: List[str], temas: List[str]) -> str:
+    """Crea saludos válidos localmente si la IA falla o ignora las reglas."""
+    introducciones = (
+        "A estas horas se me ocurrió {tema} y quise pasar a saludarte.",
+        "Hola, justo ahora recordé {tema} y sentí curiosidad por saber qué opinas.",
+        "A estas horas pensé por casualidad en {tema}. Fue suficiente para querer escribirte.",
+        "Entre una cosa y otra apareció el tema de {tema}, así que aproveché para mandarte un saludo.",
+        "Qué curioso: a estas horas terminé pensando en {tema}. Me pareció una buena forma de iniciar una charla.",
+        "Hoy hubo un momento que me hizo pensar en {tema}. Por eso vine a preguntarte cómo va todo.",
+        "Hace un rato recordé {tema} y quise saber qué dirías tú.",
+        "Pasaba por aquí y surgió una pregunta sobre {tema}. Me dio curiosidad leer tu respuesta.",
+    )
+    desarrollos = (
+        "Es uno de esos asuntos cotidianos que cambia mucho según la historia de cada persona. Seguro tienes una respuesta propia.",
+        "Puede parecer algo sencillo, pero suele traer anécdotas interesantes. Cada quien lo vive de una manera distinta.",
+        "Me gusta cuando una idea común termina abriendo una charla inesperada. Siempre aparece algún detalle que uno no imaginaba.",
+        "Hay preguntas pequeñas que dicen mucho sobre una persona. Esta me pareció especialmente buena para este momento.",
+        "Pensé que sería interesante mirar ese asunto desde otro punto de vista. Las respuestas suelen ser muy diferentes.",
+        "Es una de esas cosas que pueden cambiar el ánimo de un día entero. Por eso vale la pena detenerse a recordarla.",
+        "Cada persona guarda una anécdota distinta sobre algo así. Esa variedad es justamente lo que lo hace interesante.",
+        "No hace falta una gran historia para tener algo bueno que contar. Los detalles cotidianos suelen ser los mejores.",
+    )
+    cierres = (
+        "Espero que todo marche bien por allá. Si sigues despierto, ¿qué es lo primero que se te ocurre sobre {tema}?",
+        "Me dará gusto saber de ti a estas horas. Dime, ¿qué experiencia recuerdas relacionada con {tema}?",
+        "Te mando un saludo especial para este momento. ¿Qué respuesta darías si te preguntaran por {tema}?",
+        "Quería dejarte esta pregunta antes de irme: ¿qué opinión tienes acerca de {tema}?",
+        "Ojalá tu día haya tenido algo bueno. Cuéntame, ¿qué historia te trae el tema de {tema}?",
+        "Espero que estés teniendo un buen momento. ¿Qué detalle elegirías al hablar de {tema}?",
+        "Será interesante leer tu respuesta cuando puedas. ¿Qué recuerdo relacionas de inmediato con {tema}?",
+        "Aquí queda mi pregunta de esta hora: ¿qué me contarías tú acerca de {tema}?",
+    )
+
+    bloques = []
+    for indice, (nombre, tema) in enumerate(zip(nombres, temas), start=1):
+        variante = (indice - 1) % len(introducciones)
+        bloques.append(
+            f"{indice}. {nombre} ({tema})\n\n"
+            f"{introducciones[variante].format(tema=tema)}\n\n"
+            f"{desarrollos[variante]}\n\n"
+            f"{cierres[variante].format(tema=tema)}"
+        )
+
+    return "\n\n".join(bloques)
+
+
 def _generar_saludos_validados(
     system_prompt: str,
     prompt: str,
     nombres: List[str],
     temas: List[str],
 ) -> str:
-    """Regenera en lugar de entregar saludos que vuelvan al patrón anterior."""
-    prompt_actual = prompt
-    errores = []
-
-    for intento in range(3):
-        contenido = ai_service._llamar_ia(system_prompt, prompt_actual)
+    """Usa IA cuando cumple; en cualquier otro caso entrega el fallback local."""
+    try:
+        contenido = ai_service._llamar_ia(system_prompt, prompt)
         contenido = ai_service._sanitizar_texto(contenido.strip())
         errores = _validar_saludos_generados(contenido, nombres, temas)
         if not errores:
             return contenido
+    except Exception:
+        pass
 
-        detalle = "\n- ".join(errores)
-        prompt_actual = f"""{prompt}
-
-TU RESPUESTA ANTERIOR FUE INVÁLIDA Y DEBES CREAR OTRA DESDE CERO.
-Problemas detectados:
-- {detalle}
-
-No reutilices ninguna idea de la respuesta anterior. Cumple literalmente cada encabezado y cada tema asignado."""
-
-    raise ValueError(
-        "La IA insistió en repetir las temáticas anteriores después de 3 intentos. "
-        "Vuelve a renovar los saludos. Últimos problemas: " + "; ".join(errores)
-    )
+    return _crear_saludos_fallback(nombres, temas)
 
 
 @router.post("", response_model=Perfil)
@@ -291,16 +324,19 @@ No uses ninguna variante de descanso, relajación, respiración, tensión, mimo,
 Antes de responder, verifica que los {n + 2} enfoques sean diferentes entre sí y que incluso los dos perfiles de cuido hablen de sus temas asignados, no de cuido. Genera TODOS los {n + 2} saludos respetando esta estructura exacta."""
 
     try:
-        contenido = await asyncio.wait_for(
-            asyncio.to_thread(
-                _generar_saludos_validados,
-                system_prompt,
-                prompt,
-                nombres_salida,
-                temas_asignados,
-            ),
-            timeout=180.0,
-        )
+        try:
+            contenido = await asyncio.wait_for(
+                asyncio.to_thread(
+                    _generar_saludos_validados,
+                    system_prompt,
+                    prompt,
+                    nombres_salida,
+                    temas_asignados,
+                ),
+                timeout=90.0,
+            )
+        except asyncio.TimeoutError:
+            contenido = _crear_saludos_fallback(nombres_salida, temas_asignados)
         
         # Parsear los bloques individuales para visualización flexible
         partes = _extraer_bloques_saludos(contenido)
