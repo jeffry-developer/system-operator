@@ -5,9 +5,14 @@ CREATE TABLE IF NOT EXISTS prompts_guardados (
     nombre VARCHAR(160) NOT NULL,
     categoria VARCHAR(100) NOT NULL DEFAULT 'General',
     contenido TEXT NOT NULL,
+    imagenes JSONB NOT NULL DEFAULT '[]'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Compatible con instalaciones donde la tabla se creó antes de añadir imágenes.
+ALTER TABLE prompts_guardados
+    ADD COLUMN IF NOT EXISTS imagenes JSONB NOT NULL DEFAULT '[]'::jsonb;
 
 CREATE INDEX IF NOT EXISTS idx_prompts_guardados_usuario_id
     ON prompts_guardados(usuario_id);

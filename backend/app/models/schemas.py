@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List
 from datetime import datetime
 from uuid import UUID
@@ -194,6 +194,7 @@ class PromptBase(BaseModel):
     nombre: str
     categoria: str = "General"
     contenido: str
+    imagenes: List[str] = Field(default_factory=list)
 
 
 class PromptCreate(PromptBase):
@@ -204,6 +205,7 @@ class PromptUpdate(BaseModel):
     nombre: Optional[str] = None
     categoria: Optional[str] = None
     contenido: Optional[str] = None
+    imagenes: Optional[List[str]] = None
 
 
 class PromptGuardado(PromptBase):

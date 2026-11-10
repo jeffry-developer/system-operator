@@ -106,6 +106,7 @@ export interface PromptGuardado {
   nombre: string;
   categoria: string;
   contenido: string;
+  imagenes: string[];
   created_at: string;
   updated_at: string;
 }

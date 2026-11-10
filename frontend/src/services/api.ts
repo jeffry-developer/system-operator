@@ -233,12 +233,12 @@ class ApiService {
     return response.data;
   }
 
-  async createPrompt(data: { nombre: string; categoria: string; contenido: string }) {
+  async createPrompt(data: { nombre: string; categoria: string; contenido: string; imagenes: string[] }) {
     const response = await this.client.post('/prompts', data);
     return response.data;
   }
 
-  async updatePrompt(id: string, data: Partial<{ nombre: string; categoria: string; contenido: string }>) {
+  async updatePrompt(id: string, data: Partial<{ nombre: string; categoria: string; contenido: string; imagenes: string[] }>) {
     const response = await this.client.put(`/prompts/${id}`, data);
     return response.data;
   }
