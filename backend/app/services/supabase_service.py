@@ -2,7 +2,8 @@ from app.core.database import get_supabase, get_supabase_service
 from app.models.schemas import (
     UsuarioCreate, Usuario, PerfilCreate, Perfil, PerfilUpdate,
     MensajeGeneradoCreate, MensajeGenerado, ImagenDescargadaCreate, ImagenDescargada,
-    TipoMensaje, CartaPagadoraCreate, CartaPagadora, HistoriaGuardadaCreate, HistoriaGuardada
+    TipoMensaje, CartaPagadoraCreate, CartaPagadora, HistoriaGuardadaCreate, HistoriaGuardada,
+    PromptCreate, PromptUpdate
 )
 from uuid import UUID
 from typing import List, Optional, Dict
@@ -204,6 +205,29 @@ class SupabaseService:
 
     def delete_historia(self, historia_id: UUID, perfil_id: UUID) -> bool:
         response = self.client.table("historias_guardadas").delete().eq("id", str(historia_id)).eq("perfil_id", str(perfil_id)).execute()
+        return len(response.data) > 0
+
+    # =========================================================================
+    # BIBLIOTECA DE PROMPTS
+    # =========================================================================
+    def create_prompt(self, prompt: PromptCreate, usuario_id: UUID) -> Optional[Dict]:
+        data = prompt.model_dump()
+        data["usuario_id"] = str(usuario_id)
+        response = self.client.table("prompts_guardados").insert(data).execute()
+        return response.data[0] if response.data else None
+
+    def get_prompts_by_usuario(self, usuario_id: UUID) -> List[Dict]:
+        response = self.client.table("prompts_guardados").select("*").eq("usuario_id", str(usuario_id)).order("updated_at", desc=True).execute()
+        return response.data or []
+
+    def update_prompt(self, prompt_id: UUID, usuario_id: UUID, updates: PromptUpdate) -> Optional[Dict]:
+        data = updates.model_dump(exclude_unset=True)
+        data["updated_at"] = datetime.utcnow().isoformat()
+        response = self.client.table("prompts_guardados").update(data).eq("id", str(prompt_id)).eq("usuario_id", str(usuario_id)).execute()
+        return response.data[0] if response.data else None
+
+    def delete_prompt(self, prompt_id: UUID, usuario_id: UUID) -> bool:
+        response = self.client.table("prompts_guardados").delete().eq("id", str(prompt_id)).eq("usuario_id", str(usuario_id)).execute()
         return len(response.data) > 0
 
 

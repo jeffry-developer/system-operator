@@ -536,28 +536,25 @@ CONTEXTO DE CONTINUIDAD PARA PAGADORA '{request.pagadora}':
         raise HTTPException(status_code=500, detail=f"Error al generar cartas: {str(e)}")
 
 
-@router.post("/{perfil_id}/generar-historia")
+@router.post("/{perfil_id}/generar-carta")
+@router.post("/{perfil_id}/generar-historia", include_in_schema=False)
 async def generar_historia(perfil_id: UUID, request: HistoriaRequest, current_user: UUID = Depends(get_current_user)):
-    """Genera una historia opcional bajo demanda (romántica, sensual, sexual, personalizada)"""
+    """Genera una carta opcional bajo demanda."""
     perfil = supabase_service.get_perfil(perfil_id, current_user)
     if not perfil:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
 
     try:
-        prompt_historia = f"""{perfil["prompt_personalidad"]}
+        contexto_carta = f"""{perfil["prompt_personalidad"]}
 
-Genera una historia completa de tipo '{request.tipo}' sobre: {request.tema}.
-{'Para la pagadora: ' + request.pagadora if request.pagadora else 'Historia genérica sin pagadora específica.'}
-Estilo: narrativo, inmersivo, adaptado a la personalidad del perfil.
-Longitud: 4-6 párrafos. Sin placeholders."""
+Escribe una carta completa de tipo '{request.tipo}' sobre: {request.tema}.
+{'Dirigida a la pagadora: ' + request.pagadora if request.pagadora else 'Carta general sin pagadora específica.'}
+Mantén un estilo epistolar, íntimo y adaptado a la personalidad del perfil. Sin placeholders."""
         
-        # Usar CARTA_ROMANTICA como base pero adaptado para historia larga
-        mensajes = await asyncio.wait_for(
-            asyncio.to_thread(ai_service.generar_mensajes, prompt_historia, [TipoMensaje.CARTA_ROMANTICA]),
+        contenido = await asyncio.wait_for(
+            asyncio.to_thread(ai_service.generar_carta_extensa, contexto_carta, request.tipo, 6),
             timeout=120.0
         )
-        
-        contenido = mensajes.get("carta_romantica", "")
         
         # Guardar en historias_guardadas
         historia_data = HistoriaGuardadaCreate(
@@ -580,7 +577,7 @@ Longitud: 4-6 párrafos. Sin placeholders."""
     except asyncio.TimeoutError:
         raise HTTPException(status_code=504, detail="La IA tardó demasiado. Intenta de nuevo.")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al generar historia: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al generar la carta: {str(e)}")
 
 
 @router.get("/{perfil_id}/pagadoras")
@@ -632,9 +629,10 @@ async def delete_pagadora(perfil_id: UUID, pagadora_id: UUID, current_user: UUID
     return {"message": "Pagadora eliminada correctamente"}
 
 
-@router.get("/{perfil_id}/historias")
+@router.get("/{perfil_id}/cartas-guardadas")
+@router.get("/{perfil_id}/historias", include_in_schema=False)
 async def get_historias(perfil_id: UUID, current_user: UUID = Depends(get_current_user)):
-    """Obtiene todas las historias guardadas de un perfil"""
+    """Obtiene todas las cartas guardadas de un perfil."""
     perfil = supabase_service.get_perfil(perfil_id, current_user)
     if not perfil:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
@@ -642,22 +640,24 @@ async def get_historias(perfil_id: UUID, current_user: UUID = Depends(get_curren
     return supabase_service.get_historias_by_perfil(perfil_id)
 
 
-@router.delete("/{perfil_id}/historias/{historia_id}")
+@router.delete("/{perfil_id}/cartas-guardadas/{historia_id}")
+@router.delete("/{perfil_id}/historias/{historia_id}", include_in_schema=False)
 async def delete_historia(perfil_id: UUID, historia_id: UUID, current_user: UUID = Depends(get_current_user)):
-    """Elimina una historia guardada"""
+    """Elimina una carta guardada."""
     perfil = supabase_service.get_perfil(perfil_id, current_user)
     if not perfil:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
     
     success = supabase_service.delete_historia(historia_id, perfil_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Historia no encontrada")
-    return {"message": "Historia eliminada"}
+        raise HTTPException(status_code=404, detail="Carta no encontrada")
+    return {"message": "Carta eliminada"}
 
 
-@router.post("/{perfil_id}/historias")
+@router.post("/{perfil_id}/cartas-guardadas")
+@router.post("/{perfil_id}/historias", include_in_schema=False)
 async def save_historia(perfil_id: UUID, request: dict, current_user: UUID = Depends(get_current_user)):
-    """Guarda o actualiza una historia personalizada"""
+    """Guarda una carta personalizada."""
     perfil = supabase_service.get_perfil(perfil_id, current_user)
     if not perfil:
         raise HTTPException(status_code=404, detail="Perfil no encontrado")
@@ -672,7 +672,7 @@ async def save_historia(perfil_id: UUID, request: dict, current_user: UUID = Dep
         )
         resultado = supabase_service.save_historia(historia_data)
         if not resultado:
-            raise HTTPException(status_code=500, detail="Error al guardar historia")
+            raise HTTPException(status_code=500, detail="Error al guardar la carta")
         return resultado
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al guardar historia: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al guardar la carta: {str(e)}")

@@ -173,22 +173,22 @@ class ApiService {
 
   // Historias
   async generarHistoria(perfilId: string, data: { tipo: string; tema: string; pagadora?: string }) {
-    const response = await this.client.post(`/perfiles/${perfilId}/generar-historia`, data);
+    const response = await this.client.post(`/perfiles/${perfilId}/generar-carta`, data);
     return response.data;
   }
 
   async getHistorias(perfilId: string) {
-    const response = await this.client.get(`/perfiles/${perfilId}/historias`);
+    const response = await this.client.get(`/perfiles/${perfilId}/cartas-guardadas`);
     return response.data;
   }
 
   async deleteHistoria(perfilId: string, historiaId: string) {
-    const response = await this.client.delete(`/perfiles/${perfilId}/historias/${historiaId}`);
+    const response = await this.client.delete(`/perfiles/${perfilId}/cartas-guardadas/${historiaId}`);
     return response.data;
   }
 
   async saveHistoria(data: { perfil_id: string; titulo: string; tipo: string; contenido: string; pagadora_asociada?: string }) {
-    const response = await this.client.post(`/perfiles/${data.perfil_id}/historias`, data);
+    const response = await this.client.post(`/perfiles/${data.perfil_id}/cartas-guardadas`, data);
     return response.data;
   }
 
@@ -224,6 +224,27 @@ class ApiService {
 
   async deleteAllImagenes() {
     const response = await this.client.delete('/imagenes');
+    return response.data;
+  }
+
+  // Biblioteca de prompts
+  async getPrompts() {
+    const response = await this.client.get('/prompts');
+    return response.data;
+  }
+
+  async createPrompt(data: { nombre: string; categoria: string; contenido: string }) {
+    const response = await this.client.post('/prompts', data);
+    return response.data;
+  }
+
+  async updatePrompt(id: string, data: Partial<{ nombre: string; categoria: string; contenido: string }>) {
+    const response = await this.client.put(`/prompts/${id}`, data);
+    return response.data;
+  }
+
+  async deletePrompt(id: string) {
+    const response = await this.client.delete(`/prompts/${id}`);
     return response.data;
   }
 }

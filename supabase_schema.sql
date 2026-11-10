@@ -82,6 +82,19 @@ CREATE TABLE historias_guardadas (
 );
 
 -- ============================================================================
+-- TABLA: prompts_guardados (BIBLIOTECA PERSONAL DE PROMPTS)
+-- ============================================================================
+CREATE TABLE prompts_guardados (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    usuario_id UUID REFERENCES usuarios(id) ON DELETE CASCADE NOT NULL,
+    nombre VARCHAR(160) NOT NULL,
+    categoria VARCHAR(100) NOT NULL DEFAULT 'General',
+    contenido TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ============================================================================
 -- ÍNDICES PARA PERFORMANCE
 -- ============================================================================
 CREATE INDEX idx_perfiles_usuario_id ON perfiles(usuario_id);
@@ -90,6 +103,7 @@ CREATE INDEX idx_imagenes_usuario_id ON imagenes_descargadas(usuario_id);
 CREATE INDEX idx_imagenes_hash ON imagenes_descargadas(hash_imagen);
 CREATE INDEX idx_cartas_pagadoras_perfil_id ON cartas_pagadoras(perfil_id);
 CREATE INDEX idx_historias_perfil_id ON historias_guardadas(perfil_id);
+CREATE INDEX idx_prompts_guardados_usuario_id ON prompts_guardados(usuario_id);
 
 -- ============================================================================
 -- ROW LEVEL SECURITY (RLS) - AISLAMIENTO DE DATOS POR USUARIO
@@ -102,6 +116,7 @@ ALTER TABLE mensajes_generados ENABLE ROW LEVEL SECURITY;
 ALTER TABLE imagenes_descargadas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cartas_pagadoras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE historias_guardadas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE prompts_guardados ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
 -- POLÍTICAS RLS: usuarios
@@ -236,6 +251,21 @@ CREATE POLICY "historias_delete_own" ON historias_guardadas
     );
 
 -- ============================================================================
+-- POLÍTICAS RLS: prompts_guardados
+-- ============================================================================
+CREATE POLICY "prompts_select_own" ON prompts_guardados
+    FOR SELECT USING (auth.uid() = usuario_id);
+
+CREATE POLICY "prompts_insert_own" ON prompts_guardados
+    FOR INSERT WITH CHECK (auth.uid() = usuario_id);
+
+CREATE POLICY "prompts_update_own" ON prompts_guardados
+    FOR UPDATE USING (auth.uid() = usuario_id);
+
+CREATE POLICY "prompts_delete_own" ON prompts_guardados
+    FOR DELETE USING (auth.uid() = usuario_id);
+
+-- ============================================================================
 -- FUNCIONES AUXILIARES
 -- ============================================================================
 
@@ -262,6 +292,9 @@ CREATE TRIGGER update_usuarios_updated_at BEFORE UPDATE ON usuarios
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_perfiles_updated_at BEFORE UPDATE ON perfiles
+    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_prompts_guardados_updated_at BEFORE UPDATE ON prompts_guardados
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_cartas_pagadoras_fecha BEFORE UPDATE ON cartas_pagadoras

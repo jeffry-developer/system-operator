@@ -188,3 +188,29 @@ class MessageRequest(BaseModel):
 class MessageResponse(BaseModel):
     perfil_id: UUID
     mensajes: dict
+
+
+class PromptBase(BaseModel):
+    nombre: str
+    categoria: str = "General"
+    contenido: str
+
+
+class PromptCreate(PromptBase):
+    pass
+
+
+class PromptUpdate(BaseModel):
+    nombre: Optional[str] = None
+    categoria: Optional[str] = None
+    contenido: Optional[str] = None
+
+
+class PromptGuardado(PromptBase):
+    id: UUID
+    usuario_id: UUID
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True

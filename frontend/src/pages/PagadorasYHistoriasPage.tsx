@@ -329,7 +329,7 @@ export function PagadorasYHistoriasPage() {
     setEditorTipo(carta.tipo === "sexual" ? "sexual" : "romantica");
     setEditorPagadoraAsociada(carta.pagadora || "");
     setActiveTab("estudio_lector");
-    success("Carta cargada en el Estudio como historia interactiva");
+    success("Carta cargada en el Estudio");
   };
 
   // === PAGADORAS ===
@@ -434,7 +434,7 @@ export function PagadorasYHistoriasPage() {
 
   const deletePagadora = async (pagadora: CartaPagadora) => {
     const nombre = pagadora.nombre_pagadora;
-    if (!confirm(`¿Eliminar la pagadora "${nombre}"? Sus historias quedarán sin pagadora asociada.`)) return;
+    if (!confirm(`¿Eliminar la pagadora "${nombre}"? Sus cartas quedarán sin pagadora asociada.`)) return;
     try {
       await api.deletePagadora(selectedPerfilId, pagadora.id);
       syncPagadoraLocalReferences(nombre, null);
@@ -472,9 +472,9 @@ export function PagadorasYHistoriasPage() {
       setEstudioDocId("ai_historia_" + Date.now());
       setEditorContent(res.contenido);
       setActiveTab("estudio_lector");
-      success("Historia generada con éxito");
+      success("Carta generada con éxito");
     } catch (e: any) {
-      showError(e.response?.data?.detail || "Error al generar historia con IA");
+      showError(e.response?.data?.detail || "Error al generar la carta con IA");
     } finally {
       setGeneratingAI(false);
     }
@@ -507,23 +507,23 @@ export function PagadorasYHistoriasPage() {
         contenido: editorContent,
         pagadora_asociada: editorPagadoraAsociada || undefined,
       });
-      success(editingHistoria ? "Historia actualizada" : "Historia guardada");
+      success(editingHistoria ? "Carta actualizada" : "Carta guardada");
       loadHistorias();
     } catch (e: any) {
-      showError(e.response?.data?.detail || "Error al guardar historia");
+      showError(e.response?.data?.detail || "Error al guardar la carta");
     } finally {
       setSavingHistoria(false);
     }
   };
 
   const deleteHistoria = async (id: string) => {
-    if (!confirm("¿Eliminar esta historia?")) return;
+    if (!confirm("¿Eliminar esta carta?")) return;
     try {
       await api.deleteHistoria(selectedPerfilId, id);
-      success("Historia eliminada");
+      success("Carta eliminada");
       loadHistorias();
     } catch {
-      showError("Error al eliminar historia");
+      showError("Error al eliminar la carta");
     }
   };
 
@@ -603,7 +603,7 @@ export function PagadorasYHistoriasPage() {
             <div className="p-2 bg-gradient-to-tr from-purple-600 to-rose-600 rounded-xl text-white shadow-sm">
               <BookOpen className="w-5 h-5" />
             </div>
-            Estudio (Cartas & Historias)
+            Estudio de Cartas
           </h1>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             Prompts editables, cartas separadas por párrafos y seguimiento visual de pagadoras
@@ -632,7 +632,7 @@ export function PagadorasYHistoriasPage() {
           {[
             { id: "cartas", label: "Cartas", emoji: "💌", desc: "Prompts, pegado y guardadas", count: cartasGuardadas.length },
             { id: "estudio_lector", label: "Estudio & Marcadores", emoji: "🎯", desc: "Seguimiento visual de pagadoras", activeBadge: parrafos.length > 0 ? `${parrafos.length} párr.` : undefined },
-            { id: "historias", label: "Historias Guardadas", emoji: "📚", desc: "Cartas e historias guardadas", count: historias.length + cartasGuardadas.length },
+            { id: "historias", label: "Cartas Guardadas", emoji: "📚", desc: "Todas tus cartas guardadas", count: historias.length + cartasGuardadas.length },
             { id: "pagadoras", label: "Pagadoras", emoji: "👥", desc: "Gestión de clientas", count: pagadoras.length },
           ].map((tab) => (
             <button
@@ -868,7 +868,7 @@ export function PagadorasYHistoriasPage() {
                 </div>
                 <div>
                   <h2 className="font-bold text-gray-900 dark:text-gray-100 text-base">
-                    {editorTitulo || "Historia en Estudio"}
+                    {editorTitulo || "Carta en Estudio"}
                   </h2>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {parrafos.length} {parrafos.length === 1 ? "párrafo estructurado" : "párrafos estructurados"}
@@ -904,7 +904,7 @@ export function PagadorasYHistoriasPage() {
                   className="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold"
                 >
                   {savingHistoria ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Save className="w-3.5 h-3.5 mr-1" />}
-                  Guardar Historia
+                  Guardar Carta
                 </Button>
               </div>
             </div>
@@ -914,12 +914,12 @@ export function PagadorasYHistoriasPage() {
               <div className="bg-white dark:bg-gray-900 p-5 rounded-2xl border border-gray-100 dark:border-gray-800 shadow-sm space-y-4">
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="titulo_historia">Título de la Historia</Label>
+                    <Label htmlFor="titulo_historia">Título de la Carta</Label>
                     <Input
                       id="titulo_historia"
                       value={editorTitulo}
                       onChange={(e) => setEditorTitulo(e.target.value)}
-                      placeholder="Título de la historia..."
+                      placeholder="Título de la carta..."
                     />
                   </div>
                   <div>
@@ -943,7 +943,7 @@ export function PagadorasYHistoriasPage() {
                     value={editorContent}
                     onChange={(e) => setEditorContent(e.target.value)}
                     rows={16}
-                    placeholder="Escribe o pega aquí la historia..."
+                    placeholder="Escribe o pega aquí la carta..."
                     className="font-mono text-xs leading-relaxed"
                   />
                 </div>
@@ -956,7 +956,7 @@ export function PagadorasYHistoriasPage() {
                 <div className="flex items-center gap-2">
                   <Flag className="w-4 h-4 text-purple-600 dark:text-purple-400" />
                   <span className="font-bold text-gray-900 dark:text-gray-100 text-sm">
-                    Seguimiento de Pagadoras en la Historia
+                    Seguimiento de Pagadoras en la Carta
                   </span>
                   <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 font-semibold">
                     {pagadoras.length} {pagadoras.length === 1 ? "pagadora" : "pagadoras"}
@@ -986,7 +986,7 @@ export function PagadorasYHistoriasPage() {
               {pagadoras.length === 0 ? (
                 <div className="text-center py-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-dashed border-gray-200 dark:border-gray-700">
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    No tienes pagadoras creadas. Haz clic en "+ Crear Pagadora" para asignar marcadores a esta historia.
+                    No tienes pagadoras creadas. Haz clic en "+ Crear Pagadora" para asignar marcadores a esta carta.
                   </p>
                 </div>
               ) : (
@@ -1107,12 +1107,12 @@ export function PagadorasYHistoriasPage() {
               {parrafos.length === 0 ? (
                 <div className="p-12 text-center bg-white dark:bg-gray-900 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                   <FileText className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay contenido en esta historia</h3>
+                  <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay contenido en esta carta</h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 mb-4">
-                    Haz clic en "Editar Texto" arriba o genera una historia con IA.
+                    Haz clic en "Editar Texto" arriba o genera una carta con IA.
                   </p>
                   <Button onClick={openNewHistoria} className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
-                    <Sparkles className="w-4 h-4 mr-2" /> Generar Historia con IA
+                    <Sparkles className="w-4 h-4 mr-2" /> Generar Carta con IA
                   </Button>
                 </div>
               ) : (
@@ -1253,7 +1253,7 @@ export function PagadorasYHistoriasPage() {
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <BookOpen className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-                  Historias y Cartas Guardadas
+                  Cartas Guardadas
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
                   Toda tu biblioteca en un solo lugar, lista para copiar o abrir en el Estudio
@@ -1263,7 +1263,7 @@ export function PagadorasYHistoriasPage() {
                 onClick={openNewHistoria}
                 className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs"
               >
-                <Plus className="w-4 h-4 mr-1.5" /> Nueva Historia con IA
+                <Plus className="w-4 h-4 mr-1.5" /> Nueva Carta con IA
               </Button>
             </div>
 
@@ -1363,26 +1363,26 @@ export function PagadorasYHistoriasPage() {
               <div>
                 <h3 className="text-base font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                   <BookOpen className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-                  Historias Guardadas
+                  Cartas guardadas en el servidor
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Narrativas guardadas en el servidor para este perfil
+                  Cartas disponibles para este perfil
                 </p>
               </div>
               <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
-                {historias.length} {historias.length === 1 ? "historia" : "historias"}
+                {historias.length} {historias.length === 1 ? "carta" : "cartas"}
               </span>
             </div>
 
             {historias.length === 0 ? (
               <div className="text-center py-16 bg-gray-50/50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
                 <BookOpen className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-                <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay historias guardadas</h3>
+                <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay cartas guardadas en el servidor</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 mt-1">
-                  Genera una historia con IA o carga una carta para llevar el control de cada pagadora.
+                  Genera una carta con IA o carga una carta para llevar el control de cada pagadora.
                 </p>
                 <Button onClick={openNewHistoria} className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
-                  <Sparkles className="w-4 h-4 mr-2" /> Crear primera historia
+                  <Sparkles className="w-4 h-4 mr-2" /> Crear primera carta
                 </Button>
               </div>
             ) : (
@@ -1466,7 +1466,7 @@ export function PagadorasYHistoriasPage() {
                   Lista de Pagadoras
                 </h2>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Clientas a las que les envías cartas y llevas seguimiento de historias
+                  Clientas a las que les envías cartas y llevas seguimiento
                 </p>
               </div>
               <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs">
@@ -1479,7 +1479,7 @@ export function PagadorasYHistoriasPage() {
                 <UserPlus className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
                 <h3 className="font-bold text-gray-800 dark:text-gray-200">No hay pagadoras registradas</h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 mt-1">
-                  Agrega a tus clientas para ordenar sus cartas e historias de forma sencilla.
+                  Agrega a tus clientas para ordenar sus cartas de forma sencilla.
                 </p>
                 <Button onClick={openPagadoraModal} className="bg-purple-600 hover:bg-purple-700 text-white text-xs">
                   <Plus className="w-4 h-4 mr-2" /> Agregar primera pagadora
@@ -1652,7 +1652,7 @@ export function PagadorasYHistoriasPage() {
           className="space-y-4"
         >
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            El nuevo nombre también se actualizará en sus historias, cartas guardadas y marcadores del Estudio.
+            El nuevo nombre también se actualizará en sus cartas guardadas y marcadores del Estudio.
           </p>
           <div>
             <Label htmlFor="pagadora_edit_nombre">Nombre de la pagadora *</Label>
@@ -1695,7 +1695,7 @@ export function PagadorasYHistoriasPage() {
       <Modal
         isOpen={!!viewingHistoria}
         onClose={() => setViewingHistoria(null)}
-        title={viewingHistoria?.titulo || "Historia Completa"}
+        title={viewingHistoria?.titulo || "Carta Completa"}
         size="lg"
       >
         {viewingHistoria && (
@@ -1719,16 +1719,16 @@ export function PagadorasYHistoriasPage() {
       <Modal
         isOpen={showAIGenerator}
         onClose={() => setShowAIGenerator(false)}
-        title="Generar Historia con IA"
+        title="Generar Carta con IA"
         size="md"
       >
         <div className="space-y-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            La IA generará una historia completa por párrafos. Podrás verla en el Estudio y mover los nombres de tus pagadoras.
+            La IA generará una carta completa por párrafos. Podrás verla en el Estudio y mover los nombres de tus pagadoras.
           </p>
 
           <div>
-            <Label>Tipo de historia</Label>
+            <Label>Tipo de carta</Label>
             <select
               value={editorTipo}
               onChange={(e) => setEditorTipo(e.target.value as any)}
@@ -1746,7 +1746,7 @@ export function PagadorasYHistoriasPage() {
               id="ai_tema"
               value={editorTitulo}
               onChange={(e) => setEditorTitulo(e.target.value)}
-              placeholder="Ejemplo: Noche lluviosa a solas / Historia romántica..."
+              placeholder="Ejemplo: Carta romántica sobre una noche lluviosa..."
               required
               autoFocus
             />

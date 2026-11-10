@@ -7,6 +7,7 @@ import { PlanDeTrabajoPage } from './pages/PlanDeTrabajoPage';
 import { NewFeedPage } from './pages/NewFeedPage';
 import { PagadorasYHistoriasPage } from './pages/PagadorasYHistoriasPage';
 import { ConfiguracionPage } from './pages/ConfiguracionPage';
+import { PromptsPage } from './pages/PromptsPage';
 import { useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/Toast';
 import { useServerStatus } from './hooks/useServerStatus';
@@ -72,6 +73,7 @@ export function App() {
             <Route path="/plan-trabajo" element={<PlanDeTrabajoPage />} />
             <Route path="/new-feed" element={<NewFeedPage />} />
             <Route path="/estudio" element={<PagadorasYHistoriasPage />} />
+            <Route path="/prompts" element={<PromptsPage />} />
             <Route path="/cartas-dinamicas" element={<Navigate to="/estudio" replace />} />
             <Route path="/pagadoras-historias" element={<Navigate to="/estudio" replace />} />
             <Route path="/configuracion" element={<ConfiguracionPage />} />

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
-from app.api import auth, perfiles, imagenes
+from app.api import auth, perfiles, imagenes, prompts
 
 
 app = FastAPI(
@@ -24,6 +24,7 @@ app.add_middleware(
 app.include_router(auth.router, prefix=f"{settings.API_V1_STR}/auth", tags=["auth"])
 app.include_router(perfiles.router, prefix=f"{settings.API_V1_STR}/perfiles", tags=["perfiles"])
 app.include_router(imagenes.router, prefix=f"{settings.API_V1_STR}/imagenes", tags=["imagenes"])
+app.include_router(prompts.router, prefix=f"{settings.API_V1_STR}/prompts", tags=["prompts"])
 
 
 @app.get("/")

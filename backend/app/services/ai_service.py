@@ -52,9 +52,32 @@ class AIService:
                 prompt = f"IMPORTANTE: El siguiente contenido fue generado anteriormente. NO lo repitas ni uses las mismas frases o ideas:\n---\n{anterior}\n---\n\n{prompt}"
             
             contenido = self._llamar_ia(system_prompt, prompt)
+            if tipo in {
+                TipoMensaje.SALUDO,
+                TipoMensaje.ICEBREAKER,
+                TipoMensaje.CARTA_BARRIDO,
+                TipoMensaje.INSISTENCIA,
+                TipoMensaje.CARTA_ROMPEHIELOS,
+                TipoMensaje.RESPUESTAS_RAPIDAS,
+                TipoMensaje.POSTS,
+                TipoMensaje.SALUDO_PLAN_TRABAJO,
+                TipoMensaje.SALUDO_NEW_FEED,
+                TipoMensaje.INSISTENCIA_NEW_FEED,
+            }:
+                contenido = self._quitar_numeros_y_vinetas(contenido)
             mensajes[tipo.value] = self._sanitizar_texto(contenido.strip())
 
         return mensajes
+
+    @staticmethod
+    def _quitar_numeros_y_vinetas(contenido: str) -> str:
+        """Elimina prefijos de lista que el proveedor haya agregado por error."""
+        lineas = contenido.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+        limpias = [
+            re.sub(r"^\s*(?:(?:\d{1,2}\s*[.)-])|[-*•])\s+", "", linea)
+            for linea in lineas
+        ]
+        return "\n".join(limpias)
 
     def generar_carta_extensa(self, contexto: str, tipo: str, num_parrafos: int) -> str:
         """Genera una sola carta con una cantidad exacta de párrafos sin numeración."""
@@ -264,6 +287,24 @@ Cada prompt debe estar completo y listo para copiar en ChatGPT. Reemplaza la par
 
             TipoMensaje.INSISTENCIA_NEW_FEED: "Genera 2 mensajes de insistencia numerados (1-2) para el NEW FEED. Anecdotas/curiosidades tecnicas o mecanicas (coches, motos, electrodomesticos, como funcionan las cosas por dentro). Coherentes entre si, mismo hilo tematico. Preguntas como '¿No te ha pasado que te llama la atencion como funciona X por dentro?'. No uses placeholders.",
         }
+        # Formato actual de Plan de Trabajo y Publicaciones: solamente párrafos
+        # independientes, sin numeración ni viñetas. Se mantienen las claves
+        # anteriores para poder leer contenido histórico ya guardado.
+        prompts.update({
+            TipoMensaje.ICEBREAKER: f"Genera EXACTAMENTE 4 rompehielos para el PLAN DE TRABAJO. Escribe cada uno como un párrafo independiente, separado por una línea en blanco. Cada párrafo debe comenzar con un emoji diferente, tratar el tema {tema_icebreaker} y terminar con una pregunta. Deben ser universales. NO uses números, viñetas, títulos, etiquetas, detalles personales ni placeholders. Devuelve solamente los 4 párrafos.",
+            TipoMensaje.CARTA_ROMPEHIELOS: "Genera UNA SOLA carta de rompehielos para el PLAN DE TRABAJO. Escribe de 2 a 3 párrafos separados por una línea en blanco sobre recibir cariño, sentirse importante y saber que alguien piensa en ti. Termina con una pregunta. El contenido debe ser universal. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente los párrafos.",
+            TipoMensaje.CARTA_BARRIDO: f"Genera EXACTAMENTE 2 cartas de barrido cortas para el PLAN DE TRABAJO, cada una como un párrafo independiente y separadas por una línea en blanco. Ambas continúan el tema {tema_barrido}: la primera cuenta la actividad y la segunda la sensación que dejó. Ambas terminan con una pregunta fácil. NO uses números, viñetas, títulos, etiquetas, detalles personales ni placeholders. Devuelve solamente los 2 párrafos.",
+            TipoMensaje.INSISTENCIA: f"Genera EXACTAMENTE 2 mensajes de insistencia para el PLAN DE TRABAJO, cada uno como un párrafo independiente y separados por una línea en blanco. Continúan el mismo tema: {tema_insistencia}. No reclames por la falta de respuesta y termina cada párrafo con una pregunta sencilla. NO uses números, viñetas, títulos, etiquetas, detalles personales ni placeholders. Devuelve solamente los 2 párrafos.",
+            TipoMensaje.RESPUESTAS_RAPIDAS: f"Genera EXACTAMENTE 3 respuestas rápidas para PUBLICACIONES, cada una como un párrafo independiente y separadas por una línea en blanco. Las tres continúan lógicamente la misma conversación sobre {tema_rapidas} y cada una termina con una pregunta. NO uses números, viñetas, títulos, etiquetas, referencias personales ni placeholders. Devuelve solamente los 3 párrafos.",
+            TipoMensaje.POSTS: f"""Genera EXACTAMENTE 3 publicaciones sobre {tema_posts}. Adapta solo el tono al perfil y usa ideas universales fáciles de entender.
+
+Después del párrafo de cada publicación escribe exactamente la etiqueta PROMPT PARA CHATGPT: y, en la línea siguiente, un prompt completo para crear una imagen vertical 4:5 relacionada con esa publicación. El prompt no debe pedir palabras, letras, logos ni marcas de agua dentro de la imagen. Si aparecen personas, deben ser adultas.
+
+Separa cada conjunto de publicación y prompt con una línea que contenga solamente ---. NO agregues imágenes sugeridas, recomendaciones de imágenes, enlaces, números, viñetas, títulos de publicación ni otras etiquetas. No uses placeholders. Devuelve solamente los tres conjuntos.""",
+            TipoMensaje.SALUDO_PLAN_TRABAJO: "Genera UN SOLO saludo cálido y directo para el PLAN DE TRABAJO. Debe expresar que has pensado en esa persona y preguntar cómo ha estado o qué cosa interesante le ha ocurrido. Contenido universal, sin detalles personales. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
+            TipoMensaje.SALUDO_NEW_FEED: "Genera UN SOLO saludo cálido para PUBLICACIONES que exprese interés genuino por saber cómo está la otra persona y qué ha pasado en su vida. Contenido universal. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
+            TipoMensaje.INSISTENCIA_NEW_FEED: "Genera EXACTAMENTE 2 mensajes de insistencia para PUBLICACIONES, cada uno como un párrafo independiente y separados por una línea en blanco. Usa una curiosidad técnica o mecánica y conserva el mismo hilo temático. Termina cada párrafo con una pregunta. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente los 2 párrafos.",
+        })
         return prompts.get(tipo, "Genera un mensaje apropiado y adaptado a las reglas estipuladas.")
 
     def _llamar_ia(self, system_prompt: str, user_prompt: str) -> str:

@@ -5,6 +5,7 @@ import { useToast } from "../components/Toast";
 import { Perfil, TipoMensaje, TIPO_MENSAJE_LABELS, TIPO_MENSAJE_ICONS } from "../types";
 import { Button } from "../components/Button";
 import { copyToClipboard } from "../utils/helpers";
+import { CopyableParagraphs } from "../components/CopyableParagraphs";
 
 const PLAN_TRABAJO: TipoMensaje[] = ["icebreaker", "carta_rompehielos", "carta_barrido", "insistencia", "saludo"];
 
@@ -127,7 +128,7 @@ function MensajeItem({ tipo, contenido, loading, onGenerate, onCopy }: {
             <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-5/6" />
           </div>
         ) : contenido ? (
-          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{contenido}</p>
+          <CopyableParagraphs content={contenido} onCopy={onCopy} />
         ) : (
           <div className="flex flex-col items-center justify-center py-6 text-center">
             <p className="text-sm text-gray-400 dark:text-gray-500 mb-3">Sin contenido generado</p>

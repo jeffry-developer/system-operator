@@ -100,6 +100,16 @@ export interface ApiError {
   detail: string;
 }
 
+export interface PromptGuardado {
+  id: string;
+  usuario_id: string;
+  nombre: string;
+  categoria: string;
+  contenido: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export const TIPO_MENSAJE_LABELS: Record<TipoMensaje, string> = {
   saludo: 'Saludo',
   icebreaker: 'Rompehielos',

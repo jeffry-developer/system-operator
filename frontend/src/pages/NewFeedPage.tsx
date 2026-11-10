@@ -6,15 +6,64 @@ import { useToast } from '../components/Toast';
 import { Perfil, TipoMensaje } from '../types';
 import { Button } from '../components/Button';
 import { copyToClipboard } from '../utils/helpers';
+import { CopyableParagraphs } from '../components/CopyableParagraphs';
 
-const NEW_FEED_TIPOS: TipoMensaje[] = ['posts', 'respuestas_rapidas', 'insistencia', 'saludo'];
+const NEW_FEED_TIPOS: TipoMensaje[] = ['posts', 'respuestas_rapidas', 'insistencia_new_feed', 'saludo_new_feed'];
 
 const FEED_META: Record<string, { label: string; color: string; bg: string; border: string; Icon: any }> = {
   posts: { label: 'Publicaciones y prompts', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-100 dark:border-purple-900/40', Icon: Layout },
   respuestas_rapidas: { label: 'Respuestas Rápidas', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-100 dark:border-blue-900/40', Icon: Zap },
-  insistencia: { label: 'Mensajes de Insistencia', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-100 dark:border-amber-900/40', Icon: MessageCircle },
-  saludo: { label: 'Saludo', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-100 dark:border-green-900/40', Icon: MessageSquare },
+  insistencia_new_feed: { label: 'Mensajes de Insistencia', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-100 dark:border-amber-900/40', Icon: MessageCircle },
+  saludo_new_feed: { label: 'Saludo', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-100 dark:border-green-900/40', Icon: MessageSquare },
 };
+
+function splitPostBlocks(content: string) {
+  const normalized = content.replace(/\r\n?/g, '\n').trim();
+  if (!normalized) return [];
+
+  const candidateBlocks = normalized
+    .split(/\n\s*---+\s*\n|(?=^\s*\d{1,2}\s*[.)-]\s+)/gim)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return candidateBlocks.map((block) => {
+    const parts = block.split(/PROMPT PARA CHATGPT\s*:/i);
+    const publication = parts[0]
+      .replace(/^\s*\d{1,2}\s*[.)-]\s*/, '')
+      .replace(/^PUBLICACI[ÓO]N\s*:\s*/i, '')
+      .trim();
+    const prompt = parts.slice(1).join('PROMPT PARA CHATGPT:').replace(/^\s*["“]|["”]\s*$/g, '').trim();
+    return { publication, prompt };
+  }).filter((block) => block.publication || block.prompt);
+}
+
+function PublicationsWithPrompts({ content, onCopy }: { content: string; onCopy: (text: string) => void }) {
+  const blocks = splitPostBlocks(content);
+  const hasPrompts = blocks.some((block) => block.prompt);
+
+  if (!hasPrompts) return <CopyableParagraphs content={content} onCopy={onCopy} />;
+
+  return (
+    <div className="space-y-5">
+      {blocks.map((block, index) => (
+        <article key={`${index}-${block.publication.slice(0, 20)}`} className="space-y-3">
+          {block.publication && <CopyableParagraphs content={block.publication} onCopy={onCopy} />}
+          {block.prompt && (
+            <div className="rounded-xl border border-purple-200 bg-purple-50/70 p-4 dark:border-purple-800 dark:bg-purple-950/30">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-xs font-bold uppercase tracking-wider text-purple-700 dark:text-purple-300">Prompt para ChatGPT</span>
+                <Button variant="ghost" size="sm" onClick={() => onCopy(block.prompt)} className="h-8 text-purple-700 dark:text-purple-300">
+                  <Copy className="mr-1.5 h-3.5 w-3.5" />Copiar prompt
+                </Button>
+              </div>
+              <p className="whitespace-pre-wrap text-sm leading-relaxed text-purple-950 dark:text-purple-100">{block.prompt}</p>
+            </div>
+          )}
+        </article>
+      ))}
+    </div>
+  );
+}
 
 export function NewFeedPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
@@ -120,7 +169,9 @@ export function NewFeedPage() {
                     <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-5/6" />
                   </div>
                 ) : textoDisplay ? (
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">{textoDisplay}</p>
+                  tipo === 'posts'
+                    ? <PublicationsWithPrompts content={textoDisplay} onCopy={handleCopy} />
+                    : <CopyableParagraphs content={textoDisplay} onCopy={handleCopy} />
                 ) : (
                   <div className="flex flex-col items-center py-8 text-center">
                     <Icon className={`w-10 h-10 ${meta.color} opacity-20 mb-3`} />
