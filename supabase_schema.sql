@@ -91,6 +91,7 @@ CREATE TABLE prompts_guardados (
     categoria VARCHAR(100) NOT NULL DEFAULT 'General',
     contenido TEXT NOT NULL,
     imagenes JSONB NOT NULL DEFAULT '[]'::jsonb,
+    orden INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

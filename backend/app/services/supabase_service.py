@@ -215,9 +215,13 @@ class SupabaseService:
     # BIBLIOTECA DE PROMPTS
     # =========================================================================
     @staticmethod
-    def _pack_prompt_images(contenido: str, imagenes: List[str]) -> str:
-        """Guarda imágenes dentro del campo TEXT para funcionar sin migraciones pendientes."""
-        metadata = json.dumps(imagenes, ensure_ascii=False, separators=(",", ":"))
+    def _pack_prompt_images(contenido: str, imagenes: List[str], orden: int = 0) -> str:
+        """Guarda imágenes y orden dentro del TEXT para funcionar sin migraciones pendientes."""
+        metadata = json.dumps(
+            {"imagenes": imagenes, "orden": orden},
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
         return f"{contenido.rstrip()}{PROMPT_IMAGES_MARKER}{metadata}"
 
     @staticmethod
@@ -232,18 +236,27 @@ class SupabaseService:
                 parsed = json.loads(metadata)
                 if isinstance(parsed, list) and all(isinstance(item, str) for item in parsed):
                     embedded_images = parsed
+                    normalized["orden"] = normalized.get("orden") or 0
                     contenido = visible_content.rstrip()
-            except (json.JSONDecodeError, TypeError):
+                elif isinstance(parsed, dict):
+                    images = parsed.get("imagenes", [])
+                    if isinstance(images, list) and all(isinstance(item, str) for item in images):
+                        embedded_images = images
+                        normalized["orden"] = int(parsed.get("orden", 0))
+                        contenido = visible_content.rstrip()
+            except (json.JSONDecodeError, TypeError, ValueError):
                 pass
 
         normalized["contenido"] = contenido
         normalized["imagenes"] = embedded_images if embedded_images is not None else (normalized.get("imagenes") or [])
+        normalized["orden"] = normalized.get("orden") or 0
         return normalized
 
     def create_prompt(self, prompt: PromptCreate, usuario_id: UUID) -> Optional[Dict]:
         data = prompt.model_dump()
         imagenes = data.pop("imagenes", [])
-        data["contenido"] = self._pack_prompt_images(data["contenido"], imagenes)
+        orden = data.pop("orden", 0)
+        data["contenido"] = self._pack_prompt_images(data["contenido"], imagenes, orden)
         data["usuario_id"] = str(usuario_id)
         response = self.client.table("prompts_guardados").insert(data).execute()
         return self._unpack_prompt_images(response.data[0]) if response.data else None
@@ -254,14 +267,15 @@ class SupabaseService:
 
     def update_prompt(self, prompt_id: UUID, usuario_id: UUID, updates: PromptUpdate) -> Optional[Dict]:
         data = updates.model_dump(exclude_unset=True)
-        if "contenido" in data or "imagenes" in data:
+        if "contenido" in data or "imagenes" in data or "orden" in data:
             current_response = self.client.table("prompts_guardados").select("*").eq("id", str(prompt_id)).eq("usuario_id", str(usuario_id)).single().execute()
             if not current_response.data:
                 return None
             current = self._unpack_prompt_images(current_response.data)
             contenido = data.get("contenido", current["contenido"])
             imagenes = data.pop("imagenes", current["imagenes"])
-            data["contenido"] = self._pack_prompt_images(contenido, imagenes)
+            orden = data.pop("orden", current["orden"])
+            data["contenido"] = self._pack_prompt_images(contenido, imagenes, orden)
         data["updated_at"] = datetime.utcnow().isoformat()
         response = self.client.table("prompts_guardados").update(data).eq("id", str(prompt_id)).eq("usuario_id", str(usuario_id)).execute()
         return self._unpack_prompt_images(response.data[0]) if response.data else None

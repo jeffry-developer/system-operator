@@ -195,6 +195,7 @@ class PromptBase(BaseModel):
     categoria: str = "General"
     contenido: str
     imagenes: List[str] = Field(default_factory=list)
+    orden: int = 0
 
 
 class PromptCreate(PromptBase):
@@ -206,6 +207,7 @@ class PromptUpdate(BaseModel):
     categoria: Optional[str] = None
     contenido: Optional[str] = None
     imagenes: Optional[List[str]] = None
+    orden: Optional[int] = None
 
 
 class PromptGuardado(PromptBase):

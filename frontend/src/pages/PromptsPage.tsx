@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Copy, Edit2, FileCode2, ImagePlus, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
+import { Copy, Edit2, FileCode2, GripVertical, ImagePlus, Loader2, Plus, Search, Trash2, X } from 'lucide-react';
 
 import { api } from '../services/api';
 import { PromptGuardado } from '../types';
@@ -15,6 +15,10 @@ type PromptForm = { nombre: string; categoria: string; contenido: string; imagen
 
 const emptyForm = (): PromptForm => ({ nombre: '', categoria: '', contenido: '', imagenes: [] });
 const MAX_IMAGES = 6;
+
+function orderPrompts(items: PromptGuardado[]): PromptGuardado[] {
+  return [...items].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0));
+}
 
 function prepareImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -68,6 +72,7 @@ export function PromptsPage() {
   const [form, setForm] = useState<PromptForm>(emptyForm);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [localMode, setLocalMode] = useState(false);
+  const [draggedPromptId, setDraggedPromptId] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { success, error: showError } = useToast();
   const { user } = useAuth();
@@ -75,11 +80,11 @@ export function PromptsPage() {
   const loadPrompts = async () => {
     setLoading(true);
     try {
-      setPrompts(await api.getPrompts());
+      setPrompts(orderPrompts(await api.getPrompts()));
       setLocalMode(false);
     } catch {
       try {
-        setPrompts(await getLocalPrompts(user?.id || 'local'));
+        setPrompts(orderPrompts(await getLocalPrompts(user?.id || 'local')));
         setLocalMode(true);
       } catch (error: any) {
         showError(error.message || 'No se pudieron cargar los prompts');
@@ -122,6 +127,7 @@ export function PromptsPage() {
       categoria: form.categoria.trim() || 'General',
       contenido: form.contenido.trim(),
       imagenes: form.imagenes,
+      orden: editing?.orden ?? prompts.length,
     };
     if (!data.nombre || !data.contenido) {
       showError('Escribe un nombre y el contenido del prompt');
@@ -169,7 +175,7 @@ export function PromptsPage() {
             setLocalMode(true);
           }
         }
-        setPrompts((current) => [created, ...current]);
+        setPrompts((current) => orderPrompts([...current, created]));
         success('Prompt guardado');
       }
       setIsModalOpen(false);
@@ -238,6 +244,34 @@ export function PromptsPage() {
     }));
   };
 
+  const persistOrder = async (ordered: PromptGuardado[]) => {
+    const normalized = ordered.map((prompt, index) => ({ ...prompt, orden: index }));
+    setPrompts(normalized);
+
+    try {
+      if (localMode) {
+        await Promise.all(normalized.map(saveLocalPrompt));
+      } else {
+        await Promise.all(normalized.map((prompt) => api.updatePrompt(prompt.id, { orden: prompt.orden })));
+      }
+    } catch {
+      await Promise.all(normalized.map(saveLocalPrompt));
+      setLocalMode(true);
+    }
+  };
+
+  const movePrompt = (targetPromptId: string) => {
+    if (!draggedPromptId || draggedPromptId === targetPromptId || query.trim()) return;
+    const ordered = [...prompts];
+    const sourceIndex = ordered.findIndex((prompt) => prompt.id === draggedPromptId);
+    const targetIndex = ordered.findIndex((prompt) => prompt.id === targetPromptId);
+    if (sourceIndex < 0 || targetIndex < 0) return;
+    const [moved] = ordered.splice(sourceIndex, 1);
+    ordered.splice(targetIndex, 0, moved);
+    setDraggedPromptId(null);
+    void persistOrder(ordered);
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm dark:border-gray-800 dark:bg-gray-900 md:flex-row md:items-center md:justify-between">
@@ -271,15 +305,39 @@ export function PromptsPage() {
           {!query && <Button onClick={openCreate} variant="outline" size="sm" className="mt-4"><Plus className="mr-2 h-4 w-4" />Crear el primero</Button>}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="columns-1 gap-4 md:columns-2 xl:columns-3">
           {filteredPrompts.map((prompt) => (
-            <article key={prompt.id} className="flex min-h-64 flex-col rounded-2xl border border-gray-100 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <article
+              key={prompt.id}
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={() => movePrompt(prompt.id)}
+              className={`mb-4 inline-block w-full break-inside-avoid rounded-2xl border bg-white p-5 align-top shadow-sm transition-all dark:bg-gray-900 ${
+                draggedPromptId === prompt.id
+                  ? 'border-indigo-400 opacity-50 dark:border-indigo-600'
+                  : 'border-gray-100 hover:border-indigo-200 dark:border-gray-800 dark:hover:border-indigo-800'
+              }`}
+            >
               <div className="mb-3 flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300">{prompt.categoria}</span>
                   <h2 className="mt-2 truncate font-bold text-gray-900 dark:text-gray-100">{prompt.nombre}</h2>
                 </div>
                 <div className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    draggable={!query.trim()}
+                    onDragStart={(event) => {
+                      setDraggedPromptId(prompt.id);
+                      event.dataTransfer.effectAllowed = 'move';
+                      event.dataTransfer.setData('text/plain', prompt.id);
+                    }}
+                    onDragEnd={() => setDraggedPromptId(null)}
+                    className="cursor-grab rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-indigo-600 active:cursor-grabbing dark:hover:bg-gray-800 dark:hover:text-indigo-400"
+                    title={query.trim() ? 'Limpia la búsqueda para ordenar' : 'Arrastrar para cambiar de posición'}
+                    aria-label="Arrastrar prompt"
+                  >
+                    <GripVertical className="h-4 w-4" />
+                  </button>
                   <Button variant="ghost" size="icon" onClick={() => openEdit(prompt)} title="Editar prompt"><Edit2 className="h-4 w-4" /></Button>
                   <Button variant="ghost" size="icon" onClick={() => handleDelete(prompt)} title="Eliminar prompt" className="text-red-500"><Trash2 className="h-4 w-4" /></Button>
                 </div>
