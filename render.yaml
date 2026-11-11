@@ -14,6 +14,8 @@ services:
         value: "/api/v1"
       - key: SCRAPER_HEADLESS
         value: "true"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "480"
       # Las siguientes variables deben configurarse en el Dashboard de Render de forma segura:
       # - SUPABASE_URL
       # - SUPABASE_KEY
