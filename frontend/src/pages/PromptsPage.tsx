@@ -8,6 +8,8 @@ import { Input, Label, Textarea } from '../components/Input';
 import { Modal } from '../components/Modal';
 import { useToast } from '../components/Toast';
 import { copyToClipboard } from '../utils/helpers';
+import { useAuth } from '../context/AuthContext';
+import { deleteLocalPrompt, getLocalPrompts, saveLocalPrompt } from '../services/promptStorage';
 
 type PromptForm = { nombre: string; categoria: string; contenido: string; imagenes: string[] };
 
@@ -65,21 +67,29 @@ export function PromptsPage() {
   const [editing, setEditing] = useState<PromptGuardado | null>(null);
   const [form, setForm] = useState<PromptForm>(emptyForm);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [localMode, setLocalMode] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const { success, error: showError } = useToast();
+  const { user } = useAuth();
 
   const loadPrompts = async () => {
     setLoading(true);
     try {
       setPrompts(await api.getPrompts());
-    } catch (error: any) {
-      showError(error.message || 'No se pudieron cargar los prompts');
+      setLocalMode(false);
+    } catch {
+      try {
+        setPrompts(await getLocalPrompts(user?.id || 'local'));
+        setLocalMode(true);
+      } catch (error: any) {
+        showError(error.message || 'No se pudieron cargar los prompts');
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { loadPrompts(); }, []);
+  useEffect(() => { loadPrompts(); }, [user?.id]);
 
   const filteredPrompts = useMemo(() => {
     const term = query.trim().toLocaleLowerCase();
@@ -121,11 +131,44 @@ export function PromptsPage() {
     setSaving(true);
     try {
       if (editing) {
-        const updated = await api.updatePrompt(editing.id, data);
+        const localUpdated: PromptGuardado = {
+          ...editing,
+          ...data,
+          updated_at: new Date().toISOString(),
+        };
+        let updated = localUpdated;
+        if (localMode) {
+          await saveLocalPrompt(localUpdated);
+        } else {
+          try {
+            updated = await api.updatePrompt(editing.id, data);
+          } catch {
+            await saveLocalPrompt(localUpdated);
+            setLocalMode(true);
+          }
+        }
         setPrompts((current) => current.map((prompt) => prompt.id === editing.id ? updated : prompt));
         success('Prompt actualizado');
       } else {
-        const created = await api.createPrompt(data);
+        const now = new Date().toISOString();
+        const localCreated: PromptGuardado = {
+          id: globalThis.crypto?.randomUUID?.() || `local-${Date.now()}`,
+          usuario_id: user?.id || 'local',
+          ...data,
+          created_at: now,
+          updated_at: now,
+        };
+        let created = localCreated;
+        if (localMode) {
+          await saveLocalPrompt(localCreated);
+        } else {
+          try {
+            created = await api.createPrompt(data);
+          } catch {
+            await saveLocalPrompt(localCreated);
+            setLocalMode(true);
+          }
+        }
         setPrompts((current) => [created, ...current]);
         success('Prompt guardado');
       }
@@ -140,7 +183,16 @@ export function PromptsPage() {
   const handleDelete = async (prompt: PromptGuardado) => {
     if (!confirm(`¿Eliminar el prompt "${prompt.nombre}"?`)) return;
     try {
-      await api.deletePrompt(prompt.id);
+      if (localMode) {
+        await deleteLocalPrompt(prompt.id);
+      } else {
+        try {
+          await api.deletePrompt(prompt.id);
+        } catch {
+          await deleteLocalPrompt(prompt.id);
+          setLocalMode(true);
+        }
+      }
       setPrompts((current) => current.filter((item) => item.id !== prompt.id));
       success('Prompt eliminado');
     } catch (error: any) {
@@ -198,6 +250,12 @@ export function PromptsPage() {
         </div>
         <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Nuevo prompt</Button>
       </header>
+
+      {localMode && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+          La biblioteca está usando almacenamiento local en este dispositivo mientras se habilita la conexión con la base de datos.
+        </div>
+      )}
 
       <div className="relative">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
