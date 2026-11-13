@@ -191,7 +191,7 @@ def _validar_saludos_generados(
     nombres: List[str],
     enfoques: List[dict],
 ) -> List[str]:
-    """Comprueba el patrón: encabezado, tema visible, tres párrafos y pregunta."""
+    """Comprueba el patrón: encabezado, tres párrafos y pregunta final."""
     errores = []
     bloques = _extraer_bloques_saludos(contenido)
 
@@ -207,14 +207,7 @@ def _validar_saludos_generados(
         if titulo.casefold() != titulo_esperado.casefold():
             errores.append(f"el saludo {indice} no usó el encabezado exacto requerido")
 
-        resto = "\n".join(lineas[1:]).strip()
-        tema_esperado = f"Tema de hoy: {enfoque['tema'][0]}"
-        lineas_resto = resto.splitlines()
-        tema_recibido = lineas_resto[0].strip() if lineas_resto else ""
-        if tema_recibido.casefold() != tema_esperado.casefold():
-            errores.append(f"el saludo {indice} no mostró el tema exacto requerido")
-
-        cuerpo = "\n".join(lineas_resto[1:]).strip()
+        cuerpo = "\n".join(lineas[1:]).strip()
         parrafos = [p.strip() for p in re.split(r"\n\s*\n+", cuerpo) if p.strip()]
         if len(parrafos) != 3:
             errores.append(f"el saludo {indice} no tiene exactamente 3 párrafos")
@@ -257,11 +250,10 @@ def _crear_saludos_fallback(nombres: List[str], enfoques: List[dict]) -> str:
     }
     bloques = []
     for indice, (nombre, enfoque) in enumerate(zip(nombres, enfoques), start=1):
-        tema, entrada, desarrollo, pregunta = enfoque["tema"]
+        _, entrada, desarrollo, pregunta = enfoque["tema"]
         clave = enfoque["clave"]
         bloques.append(
             f"{indice}. {nombre} ({enfoque['categoria']})\n\n"
-            f"Tema de hoy: {tema}\n\n"
             f"{entrada} {enlaces[clave]}\n\n"
             f"{desarrollo} {puentes[clave]}\n\n"
             f"{deseos[clave]} Si sigues despierto y te apetece conversar, cuéntame: {pregunta}"
@@ -399,7 +391,7 @@ async def generar_saludos_rapidos(current_user: UUID = Depends(get_current_user)
         for i, (nombre, enfoque) in enumerate(zip(nombres_salida, enfoques_asignados), start=1)
     )
     encabezados_requeridos = "\n".join(
-        f"{i}. {nombre} ({enfoque['categoria']})\nTema de hoy: {enfoque['tema'][0]}"
+        f"{i}. {nombre} ({enfoque['categoria']})"
         for i, (nombre, enfoque) in enumerate(zip(nombres_salida, enfoques_asignados), start=1)
     )
     
@@ -425,15 +417,14 @@ PATRÓN HUMANO OBLIGATORIO:
 FORMATO EXACTO DE CADA SALUDO:
 - Encabezado literal indicado abajo.
 - Una línea en blanco.
-- Línea literal "Tema de hoy: ..." indicada abajo.
-- Una línea en blanco.
 - Exactamente 3 párrafos, separados por una línea en blanco.
-- No escribas otras etiquetas, listas, viñetas ni explicaciones.
+- El tema asignado es solo una guía interna: NO escribas "Tema de hoy", el tema ni ninguna otra etiqueta antes de los párrafos.
+- No escribas listas, viñetas ni explicaciones.
 
 ENCABEZADOS LITERALES Y OBLIGATORIOS:
 {encabezados_requeridos}
 
-Antes de responder, verifica que estén los {n + 2} saludos completos, que cada uno tenga su tema visible y que cada cierre contenga una pregunta. Genera TODOS respetando la estructura exacta."""
+Antes de responder, verifica que estén los {n + 2} saludos completos, que debajo de cada encabezado haya únicamente tres párrafos y que cada cierre contenga una pregunta. Genera TODOS respetando la estructura exacta."""
 
     try:
         try:

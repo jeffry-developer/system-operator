@@ -8,7 +8,7 @@ import { Input, Label, Textarea } from '../components/Input';
 import { Perfil } from '../types';
 import { cn, copyToClipboard } from '../utils/helpers';
 
-const SALUDOS_STORAGE_VERSION = 'saludos-humanos-v4';
+const SALUDOS_STORAGE_VERSION = 'saludos-tres-parrafos-v5';
 
 export function PerfilesPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
