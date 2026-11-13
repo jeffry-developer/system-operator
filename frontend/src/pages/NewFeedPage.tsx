@@ -119,11 +119,11 @@ export function NewFeedPage() {
             <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg"><Layout className="w-5 h-5 text-purple-600 dark:text-purple-400" /></div>
             Publicaciones
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">Publicaciones, respuestas y saludos para cada perfil.</p>
+          <p className="text-gray-500 dark:text-gray-400">Publicaciones, respuestas y saludos generales para cualquier perfil.</p>
         </div>
         <div className="flex items-end gap-3">
           <div className="flex flex-col">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Perfil Activo</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Guardar historial en</label>
             <select value={selectedPerfilId} onChange={(e) => setSelectedPerfilId(e.target.value)} className="input max-w-xs" disabled={loading}>
               {perfiles.map((p) => <option key={p.id} value={p.id}>{p.nombre_perfil}</option>)}
             </select>

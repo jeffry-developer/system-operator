@@ -8,7 +8,7 @@ import { Input, Label, Textarea } from '../components/Input';
 import { Perfil } from '../types';
 import { cn, copyToClipboard } from '../utils/helpers';
 
-const SALUDOS_STORAGE_VERSION = 'temas-variados-v3';
+const SALUDOS_STORAGE_VERSION = 'saludos-humanos-v4';
 
 export function PerfilesPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
@@ -194,7 +194,7 @@ export function PerfilesPage() {
               Saludos Generales (Noche y Madrugada)
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Un solo recuadro con todos los perfiles + 2 extras de cuido. Adaptados para noche o madrugada.
+              Cada perfil conserva su enfoque, con un tema nuevo y una pregunta natural. Incluye 2 extras de cuido.
             </p>
           </div>
           <div className="flex items-center gap-2">

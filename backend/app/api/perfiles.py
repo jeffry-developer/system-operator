@@ -19,61 +19,166 @@ from app.api.auth import get_current_user
 router = APIRouter()
 
 
-TEMAS_SALUDOS_RAPIDOS = (
-    "algo gracioso que pasó durante el día",
-    "una canción que se quedó dando vueltas en la cabeza",
-    "una película o serie que sorprendió",
-    "un antojo sencillo a estas horas",
-    "un recuerdo divertido de la infancia",
-    "una curiosidad aprendida recientemente",
-    "una foto antigua encontrada por casualidad",
-    "un sueño extraño que todavía se recuerda",
-    "una costumbre pequeña que alegra el día",
-    "el sonido de la lluvia o del viento afuera",
-    "una conversación que dejó pensando",
-    "algo inesperado que salió bien hoy",
-    "un talento que gustaría aprender",
-    "la canción ideal para cerrar el día",
-    "una comida sencilla que trae buenos recuerdos",
-    "una decisión pequeña que mejoró el día",
-    "un dato curioso que cuesta creer",
-    "una palabra o expresión que causa gracia",
-    "el mejor momento de la semana hasta ahora",
-    "algo cotidiano que resultó más divertido de lo esperado",
-    "una historia familiar que siempre hace sonreír",
-    "un objeto guardado por su valor sentimental",
-    "una afición que despierta curiosidad",
-    "un olor que trae un recuerdo inmediato",
-    "una pregunta curiosa que apareció de repente",
-    "algo nuevo que se probó por primera vez",
-    "un pequeño logro reciente",
-    "una tradición que resulta especial",
-    "una casualidad difícil de olvidar",
-    "algo que gustaría volver a hacer como principiante",
-    "un momento vergonzoso que ahora causa risa",
-    "una noticia buena que alegró el día",
+ENFOQUES_SALUDOS = (
+    {
+        "clave": "perspectiva",
+        "categoria": "Nueva perspectiva y desconexión",
+        "temas": (
+            (
+                "La ligereza de soltar las expectativas del día y dejar la mente en blanco.",
+                "Hay una paz inmensa en el instante en que decides que ya no tienes que resolver nada más hasta mañana.",
+                "Mirar las cosas con un poco de distancia permite que las exigencias del día se desvanezcan y que la perspectiva vuelva a sentirse liviana.",
+                "¿qué haces para vaciar la cabeza de preocupaciones antes de meterte a la cama?",
+            ),
+            (
+                "La ligereza de cruzar la línea entre la actividad y el descanso sin mirar atrás.",
+                "Hay un alivio enorme en ese momento preciso en que cierras los pendientes y aceptas que por hoy ya hiciste suficiente.",
+                "Cambiar de orilla por un rato ayuda a dejar el ruido donde pertenece y a recuperar una mirada mucho más fresca.",
+                "¿qué te ayuda a marcar la línea final entre tus responsabilidades y tu tiempo de descanso?",
+            ),
+            (
+                "La tranquilidad de soltar el control y dejar que el tiempo avance a su propio ritmo.",
+                "Se siente muy bien dejar de planificar cada minuto y permitir que el reloj siga su camino sin exigirle nada.",
+                "Tomar esa distancia de las obligaciones renueva la cabeza y hace que cualquier asunto pendiente pierda peso por unas horas.",
+                "¿qué te ayuda a soltar el control cuando quieres descansar de verdad?",
+            ),
+        ),
+    },
+    {
+        "clave": "bienestar",
+        "categoria": "Bienestar, relax y ritmo del día",
+        "temas": (
+            (
+                "Aflojar la mandíbula y relajar la base de la lengua para liberar tensión facial.",
+                "Notar cómo la mandíbula se suelta y deja ir la rigidez acumulada produce un alivio inmediato en todo el rostro.",
+                "Revisar esos puntos donde guardamos tensión sin darnos cuenta puede devolverle al cuerpo una comodidad sorprendente.",
+                "¿sueles notar cuánta tensión guardas en la cara cuando el día ha sido largo?",
+            ),
+            (
+                "Relajar la zona entre las cejas y soltar la tensión acumulada en la frente.",
+                "Sentir cómo la frente se alisa y los músculos de la cara dejan de sostener el gesto del día es un alivio inmediato.",
+                "Prestar atención a esas zonas pequeñas ayuda a recuperar la soltura natural y cambia por completo el ritmo del momento.",
+                "¿sueles notar cuánta expresión acumulada guardas en el rostro al final de la jornada?",
+            ),
+            (
+                "Relajar las muñecas y soltar la tensión acumulada en las manos.",
+                "Abrir las manos y dejar que las muñecas pierdan la rigidez de teclear o sostener cosas se siente mejor de lo que uno imagina.",
+                "Darles un respiro a esos pequeños puntos de esfuerzo devuelve una sensación agradable de soltura a todo el cuerpo.",
+                "¿sueles notar cuánta tensión guardas en las manos al terminar tus tareas?",
+            ),
+        ),
+    },
+    {
+        "clave": "disfrute",
+        "categoria": "Actitud positiva y disfrute del presente",
+        "temas": (
+            (
+                "El gusto por recordar una anécdota divertida o un momento que provocó una gran sonrisa.",
+                "Tener la cabeza libre a estas horas para rescatar un recuerdo gracioso y volver a reírse es uno de los mejores pasatiempos.",
+                "Dejar que el buen humor tome el control vuelve el momento más ligero y le quita cualquier complicación innecesaria.",
+                "¿cuál es el recuerdo más divertido que te viene a la mente hoy?",
+            ),
+            (
+                "El placer de curiosear sobre un tema fascinante o una idea extraña solo por gusto.",
+                "Dejarse llevar a estas horas por una idea curiosa o un dato insólito puede ser mucho más entretenido de lo esperado.",
+                "Esa curiosidad espontánea rompe la rutina y le pone una chispa muy agradable a la noche o la madrugada.",
+                "¿qué tema extraño o interesante te ha dado por investigar últimamente?",
+            ),
+            (
+                "El gusto por disfrutar un buen documental o un misterio curioso sin mirar el reloj.",
+                "Meterse de lleno en una historia fascinante o en un misterio bien contado es una manera estupenda de perder la noción del tiempo.",
+                "Seguir una pista por puro gusto mantiene despierta la curiosidad y convierte estas horas en un rato muy ameno.",
+                "¿qué misterio o tema curioso te atrapa siempre que lo ves?",
+            ),
+        ),
+    },
 )
 
-PATRON_TEMATICA_REPETITIVA = re.compile(
-    r"\b(?:descans\w*|relaj\w*|respir\w*|tensi[oó]n|mimos?|cuidad\w*|bienestar|"
-    r"protecci[oó]n|seren\w*|tranquil\w*|masaj\w*|rostro|hombros?|cuello|cuerpo|"
-    r"mente|alivio|pausa)\b",
-    re.IGNORECASE,
+ENFOQUES_EXTRAS = (
+    {
+        "clave": "refugio",
+        "nombre": "Perfil Extra 1: Mateo",
+        "categoria": "Cuido, mimo y bienestar protector",
+        "temas": (
+            (
+                "El cobijo de una almohada mullida y la certeza de estar protegido del ruido exterior.",
+                "Acomodar bien la cabeza, sentir cómo el cuerpo cede al descanso y saber que nadie pedirá nada más es lo mínimo que mereces ahora.",
+                "El mundo exterior puede quedarse fuera por un rato mientras te entregas a una atmósfera de refugio, suavidad y absoluta comodidad.",
+                "¿qué detalle hace que tu espacio de descanso se sienta como tu lugar más seguro?",
+            ),
+            (
+                "El calor de una cobija suave y la certeza de que el mundo exterior ya se detuvo.",
+                "Acomodar el cuerpo, sentir cómo las sábanas reciben tu peso y saber que nada tiene permiso de perturbarte es lo mínimo que mereces.",
+                "Esta parte de la noche puede ser un refugio privado donde las exigencias se apagan y solo queda la sensación de estar bien resguardado.",
+                "¿qué textura o elemento hace que tu cama se sienta verdaderamente tuya?",
+            ),
+            (
+                "El abrazo de una almohada fresca y la seguridad de quedar a salvo de todo ruido.",
+                "Apoyar bien la cabeza, dejar que el colchón sostenga el cuerpo y saber que nadie interrumpirá este rato brinda un descanso muy merecido.",
+                "Todo lo de afuera puede esperar mientras tu espacio se convierte en un pequeño refugio hecho de silencio, cobijo y dulzura.",
+                "¿qué detalle convierte tu espacio de descanso en tu lugar más seguro?",
+            ),
+        ),
+    },
+    {
+        "clave": "ternura",
+        "nombre": "Perfil Extra 2: Liam",
+        "categoria": "Cuido, mimo y bienestar protector",
+        "temas": (
+            (
+                "Una respiración lenta, aflojar las palmas de las manos y recibir un trato tierno.",
+                "Exhalar despacio, notar cómo la tensión abandona las palmas y dejarse cuidar es un regalo que hacía falta recibir hoy.",
+                "Mereces que este momento esté lleno de delicadeza y apapacho, protegido de cualquier resto de prisa o cansancio.",
+                "¿qué pequeño gesto de tu día te trajo más paz interior?",
+            ),
+            (
+                "Una respiración lenta, aflojar los brazos y recibir un trato sumamente tierno.",
+                "Soltar el aire, dejar que los brazos pierdan su peso y aceptar un poco de cuidado es una forma muy bonita de cerrar el ritmo del día.",
+                "Toda la atención puede ponerse ahora en que respires paz y recibas la ternura que mereces, sea de noche o de madrugada.",
+                "¿qué te da esa sensación inmediata de paz interior?",
+            ),
+            (
+                "Una respiración lenta, aflojar los hombros y recibir un trato lleno de ternura.",
+                "Exhalar despacio, sentir cómo los hombros dejan ir la tensión y permitirte recibir cuidado es el regalo que te debías hoy.",
+                "Este rato merece estar protegido de la prisa y lleno de un trato delicado que te ayude a sentir absoluta comodidad.",
+                "¿qué gesto sencillo logra que te sientas cuidado de verdad?",
+            ),
+        ),
+    },
 )
 
+ENFOQUE_POR_NOMBRE = {
+    "antonio": "perspectiva",
+    "juan m": "bienestar",
+    "luciano": "disfrute",
+}
 
-def _seleccionar_temas_saludos(cantidad: int) -> List[str]:
-    """Elige temas distintos sin relacionarlos con la categoría del perfil."""
-    if cantidad <= len(TEMAS_SALUDOS_RAPIDOS):
-        return random.sample(TEMAS_SALUDOS_RAPIDOS, cantidad)
 
-    temas = list(TEMAS_SALUDOS_RAPIDOS)
-    random.shuffle(temas)
-    temas.extend(
-        f"pregunta cotidiana inesperada número {numero}"
-        for numero in range(1, cantidad - len(temas) + 1)
-    )
-    return temas
+def _seleccionar_enfoques_saludos(nombres_perfiles: List[str]) -> List[dict]:
+    """Asigna un ángulo humano estable y rota el tema dentro de ese ángulo."""
+    seleccionados = []
+    enfoques_por_clave = {enfoque["clave"]: enfoque for enfoque in ENFOQUES_SALUDOS}
+    temas_disponibles = {
+        enfoque["clave"]: random.sample(enfoque["temas"], len(enfoque["temas"]))
+        for enfoque in (*ENFOQUES_SALUDOS, *ENFOQUES_EXTRAS)
+    }
+    usos_por_enfoque = {enfoque["clave"]: 0 for enfoque in ENFOQUES_SALUDOS}
+
+    for indice, nombre in enumerate(nombres_perfiles):
+        clave = ENFOQUE_POR_NOMBRE.get(nombre.strip().casefold())
+        enfoque = enfoques_por_clave.get(clave) if clave else None
+        if enfoque is None:
+            enfoque = ENFOQUES_SALUDOS[indice % len(ENFOQUES_SALUDOS)]
+        temas = temas_disponibles[enfoque["clave"]]
+        uso = usos_por_enfoque[enfoque["clave"]]
+        tema = temas[uso % len(temas)]
+        usos_por_enfoque[enfoque["clave"]] += 1
+        seleccionados.append({**enfoque, "tema": tema})
+
+    for enfoque in ENFOQUES_EXTRAS:
+        seleccionados.append({**enfoque, "tema": temas_disponibles[enfoque["clave"]][0]})
+
+    return seleccionados
 
 
 def _extraer_bloques_saludos(contenido: str) -> List[str]:
@@ -84,9 +189,9 @@ def _extraer_bloques_saludos(contenido: str) -> List[str]:
 def _validar_saludos_generados(
     contenido: str,
     nombres: List[str],
-    temas: List[str],
+    enfoques: List[dict],
 ) -> List[str]:
-    """Comprueba cantidad, encabezados, párrafos y ausencia del patrón repetitivo."""
+    """Comprueba el patrón: encabezado, tema visible, tres párrafos y pregunta."""
     errores = []
     bloques = _extraer_bloques_saludos(contenido)
 
@@ -94,68 +199,72 @@ def _validar_saludos_generados(
         errores.append(f"se generaron {len(bloques)} saludos y se esperaban {len(nombres)}")
         return errores
 
-    for indice, (bloque, nombre, tema) in enumerate(zip(bloques, nombres, temas), start=1):
+    aperturas = set()
+    for indice, (bloque, nombre, enfoque) in enumerate(zip(bloques, nombres, enfoques), start=1):
         lineas = bloque.splitlines()
         titulo = lineas[0].strip() if lineas else ""
-        titulo_esperado = f"{indice}. {nombre} ({tema})"
+        titulo_esperado = f"{indice}. {nombre} ({enfoque['categoria']})"
         if titulo.casefold() != titulo_esperado.casefold():
             errores.append(f"el saludo {indice} no usó el encabezado exacto requerido")
 
-        cuerpo = "\n".join(lineas[1:]).strip()
+        resto = "\n".join(lineas[1:]).strip()
+        tema_esperado = f"Tema de hoy: {enfoque['tema'][0]}"
+        lineas_resto = resto.splitlines()
+        tema_recibido = lineas_resto[0].strip() if lineas_resto else ""
+        if tema_recibido.casefold() != tema_esperado.casefold():
+            errores.append(f"el saludo {indice} no mostró el tema exacto requerido")
+
+        cuerpo = "\n".join(lineas_resto[1:]).strip()
         parrafos = [p.strip() for p in re.split(r"\n\s*\n+", cuerpo) if p.strip()]
         if len(parrafos) != 3:
             errores.append(f"el saludo {indice} no tiene exactamente 3 párrafos")
+            continue
+        if any(len(parrafo.split()) < 14 for parrafo in parrafos):
+            errores.append(f"el saludo {indice} tiene un párrafo demasiado breve")
+        if "?" not in parrafos[-1]:
+            errores.append(f"el saludo {indice} no termina con una pregunta natural")
 
-        coincidencias = sorted({m.group(0).lower() for m in PATRON_TEMATICA_REPETITIVA.finditer(cuerpo)})
-        if coincidencias:
-            errores.append(
-                f"el saludo {indice} volvió a la temática repetitiva: {', '.join(coincidencias)}"
-            )
+        apertura = " ".join(parrafos[0].casefold().split()[:8])
+        if apertura in aperturas:
+            errores.append(f"el saludo {indice} repite el mismo comienzo de otro saludo")
+        aperturas.add(apertura)
 
     return errores
 
 
-def _crear_saludos_fallback(nombres: List[str], temas: List[str]) -> str:
-    """Crea saludos válidos localmente si la IA falla o ignora las reglas."""
-    introducciones = (
-        "A estas horas se me ocurrió {tema} y quise pasar a saludarte.",
-        "Hola, justo ahora recordé {tema} y sentí curiosidad por saber qué opinas.",
-        "A estas horas pensé por casualidad en {tema}. Fue suficiente para querer escribirte.",
-        "Entre una cosa y otra apareció el tema de {tema}, así que aproveché para mandarte un saludo.",
-        "Qué curioso: a estas horas terminé pensando en {tema}. Me pareció una buena forma de iniciar una charla.",
-        "Hoy hubo un momento que me hizo pensar en {tema}. Por eso vine a preguntarte cómo va todo.",
-        "Hace un rato recordé {tema} y quise saber qué dirías tú.",
-        "Pasaba por aquí y surgió una pregunta sobre {tema}. Me dio curiosidad leer tu respuesta.",
-    )
-    desarrollos = (
-        "Es uno de esos asuntos cotidianos que cambia mucho según la historia de cada persona. Seguro tienes una respuesta propia.",
-        "Puede parecer algo sencillo, pero suele traer anécdotas interesantes. Cada quien lo vive de una manera distinta.",
-        "Me gusta cuando una idea común termina abriendo una charla inesperada. Siempre aparece algún detalle que uno no imaginaba.",
-        "Hay preguntas pequeñas que dicen mucho sobre una persona. Esta me pareció especialmente buena para este momento.",
-        "Pensé que sería interesante mirar ese asunto desde otro punto de vista. Las respuestas suelen ser muy diferentes.",
-        "Es una de esas cosas que pueden cambiar el ánimo de un día entero. Por eso vale la pena detenerse a recordarla.",
-        "Cada persona guarda una anécdota distinta sobre algo así. Esa variedad es justamente lo que lo hace interesante.",
-        "No hace falta una gran historia para tener algo bueno que contar. Los detalles cotidianos suelen ser los mejores.",
-    )
-    cierres = (
-        "Espero que todo marche bien por allá. Si sigues despierto, ¿qué es lo primero que se te ocurre sobre {tema}?",
-        "Me dará gusto saber de ti a estas horas. Dime, ¿qué experiencia recuerdas relacionada con {tema}?",
-        "Te mando un saludo especial para este momento. ¿Qué respuesta darías si te preguntaran por {tema}?",
-        "Quería dejarte esta pregunta antes de irme: ¿qué opinión tienes acerca de {tema}?",
-        "Ojalá tu día haya tenido algo bueno. Cuéntame, ¿qué historia te trae el tema de {tema}?",
-        "Espero que estés teniendo un buen momento. ¿Qué detalle elegirías al hablar de {tema}?",
-        "Será interesante leer tu respuesta cuando puedas. ¿Qué recuerdo relacionas de inmediato con {tema}?",
-        "Aquí queda mi pregunta de esta hora: ¿qué me contarías tú acerca de {tema}?",
-    )
-
+def _crear_saludos_fallback(nombres: List[str], enfoques: List[dict]) -> str:
+    """Crea localmente saludos con el mismo patrón humano de los ejemplos."""
+    enlaces = {
+        "perspectiva": "Quise pasar a saludarte en este rato de tranquilidad para cambiar de aire y dejarte una pausa agradable.",
+        "bienestar": "Qué buen momento para asomarme a saludarte y desearte una sensación de total serenidad.",
+        "disfrute": "Me asomo con la mejor actitud para dejarte un saludo cargado de buena energía.",
+        "refugio": "Quise dar una vuelta por aquí para estar al pendiente de ti y arroparte con mucha calma.",
+        "ternura": "Me paso por aquí para acompañarte y cuidar que estés sumamente cómodo en este momento.",
+    }
+    puentes = {
+        "perspectiva": "Esa distancia ayuda a renovar la perspectiva por completo, ya sea cerrando la jornada o transitando la madrugada.",
+        "bienestar": "Cuidar el bienestar a este nivel renueva la energía, sin importar si es de noche o madrugada.",
+        "disfrute": "La idea es disfrutar el presente de una forma amena, espontánea y sin complicaciones.",
+        "refugio": "Ese cobijo viene bien tanto para cerrar la jornada como para atravesar despierto la madrugada.",
+        "ternura": "Un trato así de delicado viene bien al cerrar el día o en lo profundo de la madrugada.",
+    }
+    deseos = {
+        "perspectiva": "Ojalá estés disfrutando de un rincón sumamente apacible por allá.",
+        "bienestar": "Espero que estés experimentando una comodidad muy agradable en este instante.",
+        "disfrute": "Ojalá estés pasando un rato ligero y con una sonrisa cerca.",
+        "refugio": "Deseo de corazón que estés sumergido en un confort total.",
+        "ternura": "Ojalá estés sintiendo una serenidad muy bonita en este instante.",
+    }
     bloques = []
-    for indice, (nombre, tema) in enumerate(zip(nombres, temas), start=1):
-        variante = (indice - 1) % len(introducciones)
+    for indice, (nombre, enfoque) in enumerate(zip(nombres, enfoques), start=1):
+        tema, entrada, desarrollo, pregunta = enfoque["tema"]
+        clave = enfoque["clave"]
         bloques.append(
-            f"{indice}. {nombre} ({tema})\n\n"
-            f"{introducciones[variante].format(tema=tema)}\n\n"
-            f"{desarrollos[variante]}\n\n"
-            f"{cierres[variante].format(tema=tema)}"
+            f"{indice}. {nombre} ({enfoque['categoria']})\n\n"
+            f"Tema de hoy: {tema}\n\n"
+            f"{entrada} {enlaces[clave]}\n\n"
+            f"{desarrollo} {puentes[clave]}\n\n"
+            f"{deseos[clave]} Si sigues despierto y te apetece conversar, cuéntame: {pregunta}"
         )
 
     return "\n\n".join(bloques)
@@ -165,19 +274,19 @@ def _generar_saludos_validados(
     system_prompt: str,
     prompt: str,
     nombres: List[str],
-    temas: List[str],
+    enfoques: List[dict],
 ) -> str:
     """Usa IA cuando cumple; en cualquier otro caso entrega el fallback local."""
     try:
-        contenido = ai_service._llamar_ia(system_prompt, prompt)
-        contenido = ai_service._sanitizar_texto(contenido.strip())
-        errores = _validar_saludos_generados(contenido, nombres, temas)
+        contenido = ai_service._llamar_proveedor(system_prompt, prompt).strip()
+        contenido = contenido.replace("```text", "").replace("```", "").strip()
+        errores = _validar_saludos_generados(contenido, nombres, enfoques)
         if not errores:
             return contenido
     except Exception:
         pass
 
-    return _crear_saludos_fallback(nombres, temas)
+    return _crear_saludos_fallback(nombres, enfoques)
 
 
 @router.post("", response_model=Perfil)
@@ -283,45 +392,48 @@ async def generar_saludos_rapidos(current_user: UUID = Depends(get_current_user)
 
     n = len(perfiles)
     nombres_perfiles = [p["nombre_perfil"] for p in perfiles]
-    nombres_salida = nombres_perfiles + ["Perfil Extra 1 (Cuido)", "Perfil Extra 2 (Cuido)"]
-    temas_asignados = _seleccionar_temas_saludos(n + 2)
+    enfoques_asignados = _seleccionar_enfoques_saludos(nombres_perfiles)
+    nombres_salida = nombres_perfiles + [enfoque["nombre"] for enfoque in ENFOQUES_EXTRAS]
     asignaciones = "\n".join(
-        f"{i}. {nombre} — TEMA EXCLUSIVO: {tema}"
-        for i, (nombre, tema) in enumerate(zip(nombres_salida, temas_asignados), start=1)
+        f"{i}. {nombre} — ÁNGULO: {enfoque['categoria']} — TEMA: {enfoque['tema'][0]}"
+        for i, (nombre, enfoque) in enumerate(zip(nombres_salida, enfoques_asignados), start=1)
     )
     encabezados_requeridos = "\n".join(
-        f"{i}. {nombre} ({tema})"
-        for i, (nombre, tema) in enumerate(zip(nombres_salida, temas_asignados), start=1)
+        f"{i}. {nombre} ({enfoque['categoria']})\nTema de hoy: {enfoque['tema'][0]}"
+        for i, (nombre, enfoque) in enumerate(zip(nombres_salida, enfoques_asignados), start=1)
     )
     
-    system_prompt = ai_service._construir_system_prompt("Asistente experto en redacción de saludos de contacto para perfiles de chat.")
+    system_prompt = """Eres un redactor experto en saludos nocturnos cercanos y humanos para chat.
+Escribe en español latinoamericano natural. El resultado debe sentirse escrito por una persona atenta, no por una IA.
+Respeta literalmente los encabezados y temas dados. No uses datos biográficos, personalidad ni categoría de feed de los perfiles.
+No expliques tu proceso, no agregues introducciones y no uses bloques de código."""
     
     prompt = f"""Genera un DOCUMENTO COMPLETO Y UNIFICADO con exactamente {n + 2} saludos que sirvan tanto de noche como de madrugada: uno para cada perfil registrado y dos perfiles extras de cuido al final.
 
 PERFILES Y TEMA DIFERENTE ASIGNADO A CADA SALUDO:
 {asignaciones}
 
-REGLAS OBLIGATORIAS:
-1. INDEPENDENCIA DEL PERFIL (MUY IMPORTANTE): La categoría, personalidad o nombre del perfil NO decide el tema. Usa únicamente el TEMA EXCLUSIVO asignado arriba. La palabra "Cuido" solo identifica esos dos perfiles extras; NO significa que debas hablar de mimo, cuidado, bienestar, protección, masajes, descanso, tensión corporal, relajación ni tratamientos faciales.
-2. VARIEDAD REAL (MUY IMPORTANTE): Desarrolla el tema exclusivo de cada fila y no lo mezcles con el de otra. No conviertas todos los temas en reflexiones sobre relajarse, respirar, descansar la mente o cuidar el cuerpo. No repitas escenas, preguntas, comienzos ni frases entre saludos.
-3. HORARIO NOCHE Y MADRUGADA: El horario es solo el contexto, no el tema. Cada saludo debe funcionar igual de bien de noche o de madrugada. Puedes usar expresiones como "a estas horas" o "si sigues despierto", pero no afirmes que la otra persona está por dormir.
-4. LENGUAJE SENCILLO: Usa palabras comunes y oraciones cortas. Evita palabras rebuscadas, frases demasiado poéticas y explicaciones difíciles.
-5. FORMATO EXACTO REQUERIDO:
-Cada saludo debe constar obligatoriamente de:
-- El encabezado exacto indicado abajo. No cambies ninguna palabra, no resumas el tema y no reemplaces el nombre de los perfiles extra.
-- Párrafo 1: Saludo cercano que introduce de forma natural el tema exclusivo.
-- Párrafo 2: Anécdota, pensamiento o detalle cotidiano sobre ese mismo tema.
-- Párrafo 3: Cierre cálido y una pregunta abierta relacionada con ese tema. La pregunta debe ser distinta en cada saludo.
-- Tres párrafos por saludo y doble salto de línea entre saludos.
-- No escribas etiquetas como "Tema:", "Párrafo:" o "Pregunta:".
+PATRÓN HUMANO OBLIGATORIO:
+1. Cada perfil conserva el ÁNGULO asignado y desarrolla solamente su TEMA puntual. No uses la personalidad, gustos, edad, profesión, ubicación ni ningún otro dato del perfil.
+2. Párrafo 1: abre con una sensación física o emocional concreta vinculada al tema y enlázala con el motivo natural para pasar a saludar. Escribe 2 oraciones.
+3. Párrafo 2: desarrolla la intención de forma cercana y visual. Puede hablar de soltar el día, cuidar una parte del cuerpo, disfrutar una curiosidad o sentirse protegido, según el ángulo. Escribe 2 oraciones.
+4. Párrafo 3: expresa un deseo cálido para este instante y termina con UNA pregunta fácil, personal y directamente relacionada con el tema.
+5. El horario es contexto, no tema: todo debe funcionar igual de bien de noche o de madrugada. Puedes decir "a estas horas", "si sigues despierto" o "sea de noche o madrugada", pero no asegures que la otra persona va a dormir.
+6. Usa palabras comunes, imágenes sensoriales sencillas y un tono afectuoso. Evita lenguaje publicitario, moralejas, frases motivacionales, explicaciones abstractas y preguntas de entrevista.
+7. Varía los comienzos y las preguntas. No copies una misma frase entre saludos. Los perfiles extra sí deben expresar cuido, mimo, refugio, ternura y bienestar protector.
+
+FORMATO EXACTO DE CADA SALUDO:
+- Encabezado literal indicado abajo.
+- Una línea en blanco.
+- Línea literal "Tema de hoy: ..." indicada abajo.
+- Una línea en blanco.
+- Exactamente 3 párrafos, separados por una línea en blanco.
+- No escribas otras etiquetas, listas, viñetas ni explicaciones.
 
 ENCABEZADOS LITERALES Y OBLIGATORIOS:
 {encabezados_requeridos}
 
-VOCABULARIO PROHIBIDO EN TODA LA RESPUESTA:
-No uses ninguna variante de descanso, relajación, respiración, tensión, mimo, cuidado, bienestar, protección, serenidad, tranquilidad, masaje, rostro, hombros, cuello, cuerpo, mente, alivio o pausa.
-
-Antes de responder, verifica que los {n + 2} enfoques sean diferentes entre sí y que incluso los dos perfiles de cuido hablen de sus temas asignados, no de cuido. Genera TODOS los {n + 2} saludos respetando esta estructura exacta."""
+Antes de responder, verifica que estén los {n + 2} saludos completos, que cada uno tenga su tema visible y que cada cierre contenga una pregunta. Genera TODOS respetando la estructura exacta."""
 
     try:
         try:
@@ -331,12 +443,12 @@ Antes de responder, verifica que los {n + 2} enfoques sean diferentes entre sí 
                     system_prompt,
                     prompt,
                     nombres_salida,
-                    temas_asignados,
+                    enfoques_asignados,
                 ),
                 timeout=90.0,
             )
         except asyncio.TimeoutError:
-            contenido = _crear_saludos_fallback(nombres_salida, temas_asignados)
+            contenido = _crear_saludos_fallback(nombres_salida, enfoques_asignados)
         
         # Parsear los bloques individuales para visualización flexible
         partes = _extraer_bloques_saludos(contenido)

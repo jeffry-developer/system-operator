@@ -63,11 +63,11 @@ export function PlanDeTrabajoPage() {
             <div className="p-2 bg-blue-100 dark:bg-blue-900/40 rounded-lg"><FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" /></div>
             Plan de Trabajo
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">Rompehielos, cartas y mensajes para cada perfil.</p>
+          <p className="text-gray-500 dark:text-gray-400">Contenido general y humano que puedes usar con cualquier perfil.</p>
         </div>
         <div className="flex items-end gap-3">
           <div className="flex flex-col">
-            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Perfil Activo</label>
+            <label className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Guardar historial en</label>
             <select value={selectedPerfilId} onChange={(e) => setSelectedPerfilId(e.target.value)} className="input max-w-xs" disabled={loading}>
               {perfiles.map((p) => <option key={p.id} value={p.id}>{p.nombre_perfil}</option>)}
             </select>
