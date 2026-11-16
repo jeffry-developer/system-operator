@@ -77,13 +77,16 @@ class AIService:
                 "" if es_contenido_general else prompt_personalidad,
             )
             
-            # El historial antiguo puede contener datos del perfil. Solo se usa
-            # en contenidos que siguen siendo personalizados.
-            if not es_contenido_general and ultimos_mensajes and tipo.value in ultimos_mensajes:
+            # El historial también evita que el contenido reutilizable vuelva
+            # siempre a los mismos temas. Los mensajes generales guardados no
+            # contienen información privada del perfil.
+            if ultimos_mensajes and tipo.value in ultimos_mensajes:
                 anterior = ultimos_mensajes[tipo.value][:500]  # máx 500 chars del anterior
                 prompt = f"IMPORTANTE: El siguiente contenido fue generado anteriormente. NO lo repitas ni uses las mismas frases o ideas:\n---\n{anterior}\n---\n\n{prompt}"
             
             contenido = self._llamar_ia(system_prompt, prompt)
+            if tipo == TipoMensaje.ICEBREAKER:
+                contenido = self._asegurar_emoji_en_rompehielos(contenido)
             if tipo in {
                 TipoMensaje.SALUDO,
                 TipoMensaje.ICEBREAKER,
@@ -100,6 +103,19 @@ class AIService:
             mensajes[tipo.value] = self._sanitizar_texto(contenido.strip())
 
         return mensajes
+
+    @staticmethod
+    def _asegurar_emoji_en_rompehielos(contenido: str) -> str:
+        """Garantiza un emoji inicial incluso si el proveedor omite la regla."""
+        emojis = ("💭", "🎵", "🍜", "😄")
+        bloques = [bloque.strip() for bloque in re.split(r"\n\s*\n+", contenido) if bloque.strip()]
+        resultado = []
+        patron_emoji = re.compile(r"^[\U0001F300-\U0001FAFF\u2600-\u27BF]")
+        for indice, bloque in enumerate(bloques):
+            if not patron_emoji.match(bloque):
+                bloque = f"{emojis[indice % len(emojis)]} {bloque}"
+            resultado.append(bloque)
+        return "\n\n".join(resultado)
 
     @staticmethod
     def _quitar_numeros_y_vinetas(contenido: str) -> str:
@@ -248,8 +264,8 @@ BORRADOR:
             contexto = """CONTENIDO GENERAL REUTILIZABLE:
 - Este texto NO pertenece a un perfil específico y debe servir sin cambios para cualquier perfil.
 - Ignora por completo nombres, datos, gustos, profesión, edad, ubicación, categoría y personalidad del perfil seleccionado.
-- Usa una voz humana neutra, cercana y adulta. No imites una biografía ni inventes experiencias personales concretas.
-- Lo específico debe estar en la escena o el tema cotidiano, nunca en datos de quien envía el mensaje."""
+- Usa una voz humana neutra, cercana y adulta. Puede contar una microescena cotidiana plausible en primera persona (algo que pensó, vio, escuchó, cocinó o le causó gracia), sin inventar datos biográficos sensibles ni grandes acontecimientos.
+- Lo específico debe estar en una escena cotidiana creíble. Incluye una reacción personal imperfecta y una pregunta nacida de esa escena para que no suene a plantilla."""
             regla_voz = "- Escribe con una voz humana neutra y natural que pueda usar cualquier perfil."
         else:
             contexto = f"""VOZ DEL PERFIL (es la referencia principal para que el resultado parezca escrito por esta persona):
@@ -286,7 +302,7 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
         import random
         # Temas universales rotativos para variar cada generación
         temas_saludo = ["tranquilidad nocturna y desconexión", "pequeños placeres del día a día", "reflexión y paz mental", "bienestar y autocuidado simple", "un detalle cotidiano agradable", "desconectar del ruido", "gratitud por lo simple", "momentos tranquilos"]
-        temas_icebreaker = ["una costumbre curiosa", "una opinión impopular pero ligera", "música que cambia el ánimo", "comida que siempre provoca", "planes improvisados desde casa", "una habilidad que gustaría aprender", "algo gracioso del día a día", "una elección difícil pero divertida"]
+        temas_icebreaker = ["una costumbre curiosa", "una opinión impopular pero ligera", "música que cambia el ánimo", "comida que siempre provoca", "un plan improvisado desde casa", "una habilidad que gustaría aprender", "algo gracioso del día a día", "una elección difícil pero divertida", "una foto antigua que apareció sin buscarla", "un olor que trae un recuerdo", "una conversación escuchada por casualidad", "un pequeño error que terminó dando risa"]
         temas_barrido = ["preparar algo rico para uno mismo", "cuidarse con un baño o rutina nocturna", "leer o escuchar música tranquila", "pasear sin rumbo fijo", "cocinar lento y disfrutar el proceso", "ordenar un rincón y sentir paz", "escribir o reflexionar al final del día", "disfrutar un café o té con tranquilidad"]
         temas_insistencia = ["un recuerdo bonito que apareció hoy", "una canción que te hizo sonreír", "un pensamiento al despertar", "algo pequeño que te alegró el día", "una frase que leíste y resonó", "el olor a lluvia o café por la mañana", "ver un atardecer o amanecer", "reírte de algo tonto"]
         temas_rapidas = ["una canción imposible de sacar de la cabeza", "una comida que defendería sin pensarlo", "una película o serie que sorprendió", "una manía cotidiana graciosa", "una elección divertida entre dos opciones", "algo sencillo que mejora un día pesado", "un talento inútil pero entretenido", "una opinión ligera que da para conversar"]
@@ -317,19 +333,19 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
 
 Usa un tema diferente en cada uno, en este orden: {', '.join(temas_icebreaker_elegidos)}.
 
-Cada mensaje debe tener entre 18 y 45 palabras, comenzar con una observación, elección u opinión espontánea y terminar con una pregunta fácil y atractiva. La pregunta debe permitir que ella cuente algo propio; no debe parecer una encuesta ni una entrevista. Haz que los cuatro tengan aperturas, ritmos y cierres distintos.
+Cada mensaje debe ser corto (entre 25 y 45 palabras), comenzar OBLIGATORIAMENTE con un único emoji relacionado con su tema y continuar con una observación cotidiana, una reacción personal honesta y una pregunta fácil y atractiva. La pregunta debe permitir que ella cuente algo propio; no debe parecer una encuesta ni una entrevista. Haz que los cuatro tengan emojis, aperturas, ritmos y cierres distintos.
 
-NO empieces con “hola, ¿cómo estás?”, “cuéntame de ti” ni “¿alguna vez te has preguntado...?”. NO escribas reflexiones profundas, moralejas, halagos sobre su físico ni datos enciclopédicos. No uses emojis obligatorios, números, viñetas, títulos, etiquetas, detalles inventados ni placeholders. Separa los mensajes con una línea en blanco y devuelve solamente los 4 párrafos.""",
-            TipoMensaje.CARTA_ROMPEHIELOS: "Genera UNA SOLA carta de rompehielos general para el PLAN DE TRABAJO. Escribe de 2 a 3 párrafos separados por una línea en blanco sobre recibir cariño, sentirse importante y saber que alguien piensa en ti. Termina con una pregunta. Debe servir para cualquier perfil: no uses datos, gustos, profesión, edad, ubicación, personalidad ni anécdotas biográficas. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente los párrafos.",
-            TipoMensaje.CARTA_BARRIDO: f"Genera EXACTAMENTE 2 cartas de barrido generales y cortas para el PLAN DE TRABAJO, cada una como un párrafo independiente y separadas por una línea en blanco. Ambas continúan el tema cotidiano {tema_barrido}: la primera presenta la actividad sin atribuirla a una biografía concreta y la segunda desarrolla la sensación que produce. Ambas terminan con una pregunta fácil. Deben servir para cualquier perfil. NO uses números, viñetas, títulos, etiquetas, datos del perfil ni placeholders. Devuelve solamente los 2 párrafos.",
+NO empieces con “hola, ¿cómo estás?”, “cuéntame de ti” ni “¿alguna vez te has preguntado...?”. NO escribas reflexiones profundas, moralejas, halagos sobre su físico ni datos enciclopédicos. No uses números, viñetas, títulos, etiquetas ni placeholders. Separa los mensajes con una línea en blanco y devuelve solamente los 4 párrafos.""",
+            TipoMensaje.CARTA_ROMPEHIELOS: "Genera UNA SOLA carta de rompehielos general para el PLAN DE TRABAJO de aproximadamente 350 caracteres (entre 300 y 400, contando espacios). Escríbela como un único párrafo humano y cercano: parte de una escena cotidiana plausible, conecta con la sensación de recibir cariño, sentirse importante o saber que alguien piensa en ti, y termina con una pregunta natural. No debe sonar solemne, romántica prefabricada ni escrita por una IA. Debe servir para cualquier perfil: no uses datos, profesión, edad, ubicación ni placeholders. NO uses números, viñetas, títulos ni etiquetas. Devuelve solamente la carta.",
+            TipoMensaje.CARTA_BARRIDO: f"Genera EXACTAMENTE 2 cartas de barrido independientes para el PLAN DE TRABAJO. Cada carta debe rondar los 350 caracteres (entre 300 y 400, contando espacios), ocupar un solo párrafo y separarse de la otra con una línea en blanco. Usa dos escenas diferentes relacionadas con {tema_barrido}; en cada una cuenta un detalle cotidiano plausible en primera persona, una reacción sincera y termina con una pregunta natural que demuestre interés por ella. Deben sentirse improvisadas y humanas, no como reflexión, consejo o plantilla. NO uses números, viñetas, títulos, etiquetas, datos del perfil ni placeholders. Devuelve solamente los 2 párrafos.",
             TipoMensaje.INSISTENCIA: f"Genera EXACTAMENTE 2 mensajes de insistencia generales para el PLAN DE TRABAJO, cada uno como un párrafo independiente y separados por una línea en blanco. Continúan el mismo tema cotidiano: {tema_insistencia}. No reclames por la falta de respuesta, no inventes experiencias personales y termina cada párrafo con una pregunta sencilla. Deben servir para cualquier perfil. NO uses números, viñetas, títulos, etiquetas, datos del perfil ni placeholders. Devuelve solamente los 2 párrafos.",
-            TipoMensaje.RESPUESTAS_RAPIDAS: f"""Escribe EXACTAMENTE 3 respuestas rápidas generales e independientes para iniciar una interacción con una mujer nueva. En realidad son mensajes de apertura listos para enviar desde cualquier perfil: no respondas a una publicación, no continúes una conversación previa y no asumas que ya existe confianza.
+            TipoMensaje.RESPUESTAS_RAPIDAS: f"""Escribe EXACTAMENTE 3 respuestas rápidas generales e independientes para el módulo NEW FEED. Deben servir para reaccionar de forma natural a una publicación o comentario y abrir una conversación, sin asumir que ya existe confianza.
 
 Usa un gancho diferente en cada mensaje, en este orden: {', '.join(temas_rapidas_elegidos)}.
 
-Cada mensaje debe tener entre 20 y 45 palabras. Abre con una opinión, elección o comentario concreto que despierte curiosidad y enlázalo con UNA pregunta original, sencilla y fácil de responder. Debe sentirse escrito espontáneamente por una persona real y servir sin cambios para cualquier perfil, no como una frase preparada para ligar. Los tres mensajes deben funcionar por separado y tener estructuras diferentes.
+Cada mensaje debe tener entre 20 y 45 palabras. Reacciona con una opinión o comentario concreto y enlázalo con UNA pregunta sencilla que invite a responder. Debe sentirse escrito en el momento por una persona real, no como una frase preparada para ligar. Los tres mensajes deben tener estructuras distintas.
 
-NO uses saludos vacíos como “hola, ¿cómo estás?”, halagos genéricos, datos enciclopédicos, acertijos, reflexiones profundas, frases motivacionales ni preguntas de entrevista. NO uses números, viñetas, títulos, etiquetas, emojis obligatorios, referencias personales inventadas ni placeholders. Separa los mensajes con una línea en blanco y devuelve solamente los 3 párrafos.""",
+NO uses saludos vacíos como “hola, ¿cómo estás?”, halagos genéricos, datos enciclopédicos, acertijos, reflexiones profundas, frases motivacionales ni preguntas de entrevista. No declares sentimientos intensos ni confianza que todavía no existe. NO uses números, viñetas, títulos, etiquetas ni placeholders. Separa los mensajes con una línea en blanco y devuelve solamente los 3 párrafos.""",
             TipoMensaje.POSTS: f"""Genera EXACTAMENTE 3 publicaciones generales que pueda usar cualquier perfil. Cada publicación debe abordar, en este orden, un ángulo distinto: {', '.join(temas_posts_elegidos)}.
 
 El texto de cada publicación debe tener entre 2 y 4 frases cortas en primera persona. Debe sonar como un pensamiento espontáneo y humano, con una opinión o detalle cotidiano concreto y sin moraleja. No incluyas nombres, edad, profesión, ubicación, gustos especializados, categoría ni rasgos de personalidad. No inventes recuerdos o actividades biográficas. No redactes citas inspiradoras, consejos, discursos ni reflexiones vacías. Varía la forma de empezar y no termines obligatoriamente las tres con una pregunta.
@@ -337,8 +353,8 @@ El texto de cada publicación debe tener entre 2 y 4 frases cortas en primera pe
 Después del párrafo de cada publicación escribe exactamente la etiqueta PROMPT PARA CHATGPT: y, en la línea siguiente, un prompt completo para crear una imagen vertical 4:5 relacionada con esa publicación. Cada prompt debe estar redactado completamente en español neutro; no uses palabras ni instrucciones en inglés. El prompt no debe pedir palabras, letras, logos ni marcas de agua dentro de la imagen. Si aparecen personas, deben ser adultas.
 
 Separa cada conjunto de publicación y prompt con una línea que contenga solamente ---. NO agregues imágenes sugeridas, recomendaciones de imágenes, enlaces, números, viñetas, títulos de publicación ni otras etiquetas. No uses placeholders. Devuelve solamente los tres conjuntos.""",
-            TipoMensaje.SALUDO_PLAN_TRABAJO: "Genera UN SOLO saludo cálido y directo para el PLAN DE TRABAJO que pueda usar cualquier perfil. Debe expresar de forma natural que has pensado en esa persona y preguntar cómo ha estado o qué cosa interesante le ha ocurrido. No uses información, personalidad ni experiencias del perfil seleccionado. Evita las frases perfectas o solemnes: debe parecer escrito en el momento por una persona real. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
-            TipoMensaje.SALUDO_NEW_FEED: "Escribe UN SOLO saludo breve y general que pueda enviar cualquier perfil. Debe sonar espontáneo y mostrar interés genuino sin exagerar la cercanía ni decir que extraña a alguien que apenas empieza a tratar. Incluye un motivo conversacional cotidiano y concreto, sin convertirlo en una anécdota personal, y una pregunta fácil de responder. Evita 'hola, ¿cómo estás?' como mensaje completo, frases románticas prefabricadas y preguntas de entrevista. NO uses información o rasgos del perfil seleccionado, números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
+            TipoMensaje.SALUDO_PLAN_TRABAJO: "Genera UN SOLO saludo cálido y directo para el PLAN DE TRABAJO que pueda usar cualquier perfil. Cuenta una microescena cotidiana plausible y concreta, explica con naturalidad por qué te acordaste de ella y haz una pregunta relacionada que demuestre curiosidad por su respuesta. Evita el tono perfecto, solemne o genérico: debe parecer escrito en el momento por una persona real que quiere crear conexión. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
+            TipoMensaje.SALUDO_NEW_FEED: "Escribe UN SOLO mensaje breve para acompañar una interacción en NEW FEED. Debe reaccionar con naturalidad a un tema cotidiano y abrir conversación con una pregunta fácil, sin asumir confianza previa ni presentarse como saludo para una pagadora nueva. Evita 'hola, ¿cómo estás?' como mensaje completo, frases románticas prefabricadas y preguntas de entrevista. NO uses información del perfil seleccionado, números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
             TipoMensaje.INSISTENCIA_NEW_FEED: "Escribe EXACTAMENTE 2 mensajes de seguimiento generales que pueda usar cualquier perfil, separados por una línea en blanco. Deben retomar un mismo gancho cotidiano de forma natural, pero cada uno debe poder enviarse por separado. No reclames la falta de respuesta, no presiones, no inventes una anécdota y no uses datos o rasgos del perfil seleccionado. Incluye en cada mensaje una pregunta distinta y fácil de responder. Evita curiosidades enciclopédicas, frases profundas y fórmulas de asistente. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente los 2 párrafos.",
         })
         return prompts.get(tipo, "Genera un mensaje apropiado y adaptado a las reglas estipuladas.")

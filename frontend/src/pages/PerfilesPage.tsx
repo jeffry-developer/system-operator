@@ -8,7 +8,9 @@ import { Input, Label, Textarea } from '../components/Input';
 import { Perfil } from '../types';
 import { cn, copyToClipboard } from '../utils/helpers';
 
-const SALUDOS_STORAGE_VERSION = 'saludos-tres-parrafos-v5';
+const SALUDOS_STORAGE_VERSION = 'saludos-refrescamiento-e-insistencias-v8';
+
+type InsistenciasPerfil = { nombre: string; textos: string[] };
 
 export function PerfilesPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
@@ -20,6 +22,7 @@ export function PerfilesPage() {
   const [renovandoSaludos, setRenovandoSaludos] = useState(false);
   const [saludosDocumento, setSaludosDocumento] = useState<string>('');
   const [saludosIndividuales, setSaludosIndividuales] = useState<{ nombre: string; texto: string; completo?: string }[]>([]);
+  const [insistencias, setInsistencias] = useState<InsistenciasPerfil[]>([]);
   const [copiedAll, setCopiedAll] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const [showIndividuales, setShowIndividuales] = useState(false);
@@ -48,8 +51,11 @@ export function PerfilesPage() {
     if (storedVersion === SALUDOS_STORAGE_VERSION) {
       const storedDoc = localStorage.getItem('saludos_documento_unificado');
       if (storedDoc) setSaludosDocumento(storedDoc);
+      const storedInsistencias = localStorage.getItem('insistencias_por_perfil');
+      if (storedInsistencias) setInsistencias(JSON.parse(storedInsistencias));
     } else {
       localStorage.removeItem('saludos_documento_unificado');
+      localStorage.removeItem('insistencias_por_perfil');
       localStorage.setItem('saludos_documento_version', SALUDOS_STORAGE_VERSION);
     }
   }, []);
@@ -128,7 +134,9 @@ export function PerfilesPage() {
         if ('documento_completo' in data) {
           setSaludosDocumento(data.documento_completo);
           setSaludosIndividuales(data.saludos || []);
+          setInsistencias(data.insistencias || []);
           localStorage.setItem('saludos_documento_unificado', data.documento_completo);
+          localStorage.setItem('insistencias_por_perfil', JSON.stringify(data.insistencias || []));
           localStorage.setItem('saludos_documento_version', SALUDOS_STORAGE_VERSION);
         } else if (Array.isArray(data)) {
           // Si vino array antiguo
@@ -139,7 +147,7 @@ export function PerfilesPage() {
           localStorage.setItem('saludos_documento_version', SALUDOS_STORAGE_VERSION);
         }
       }
-      success('Saludos unificados generados para noche y madrugada');
+      success('Saludos e insistencias generados');
     } catch (err: any) {
       showError(err.response?.data?.detail || 'Error al renovar los saludos generales');
     } finally {
@@ -175,7 +183,7 @@ export function PerfilesPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Perfiles</h1>
-          <p className="text-gray-600 dark:text-gray-400">Gestiona los perfiles y genera sus saludos de contacto</p>
+          <p className="text-gray-600 dark:text-gray-400">Gestiona los perfiles y genera mensajes para reactivar conversaciones</p>
         </div>
         <Button onClick={openCreateModal} className="bg-primary-600 hover:bg-primary-700 text-white shadow-sm">
           <Plus className="w-4 h-4 mr-2" />
@@ -191,10 +199,10 @@ export function PerfilesPage() {
               <span className="p-1.5 rounded-lg bg-purple-600 text-white">
                 <Moon className="w-4 h-4" />
               </span>
-              Saludos Generales (Noche y Madrugada)
+              Saludos (Refrescamiento)
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-              Cada perfil conserva su enfoque, con un tema nuevo y una pregunta natural. Incluye 2 extras de cuido.
+              Mensajes variados para retomar conversaciones ocasionales con interés real. Incluye 2 extras de cuido.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -223,7 +231,7 @@ export function PerfilesPage() {
               ) : (
                 <>
                   <RefreshIcon className="w-4 h-4 mr-1.5" />
-                  Renovar Saludos
+                  Renovar Mensajes
                 </>
               )}
             </Button>
@@ -232,13 +240,13 @@ export function PerfilesPage() {
 
         {perfiles.length === 0 ? (
           <p className="text-sm text-gray-500 dark:text-gray-400 italic py-4 text-center">
-            Crea al menos un perfil para generar los saludos unificados nocturnos y de madrugada.
+            Crea al menos un perfil para generar refrescamientos e insistencias.
           </p>
         ) : !saludosDocumento ? (
           <div className="text-center py-8">
             <MessageCircle className="w-12 h-12 text-purple-300 dark:text-purple-700 mx-auto mb-2 opacity-50" />
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-              Haz clic en "Renovar Saludos" para generar el documento único de saludos para todos tus perfiles + 2 extras de cuido.
+              Haz clic en "Renovar Mensajes" para generar refrescamientos variados para todos tus perfiles + 2 extras de cuido.
             </p>
             <Button
               onClick={handleRenovarSaludos}
@@ -246,7 +254,7 @@ export function PerfilesPage() {
               size="sm"
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
-              <Sparkles className="w-4 h-4 mr-2" /> Generar Saludos Ahora
+              <Sparkles className="w-4 h-4 mr-2" /> Generar Mensajes Ahora
             </Button>
           </div>
         ) : (
@@ -315,6 +323,35 @@ export function PerfilesPage() {
           </div>
         )}
       </div>
+
+      {insistencias.length > 0 && (
+        <section className="rounded-2xl border border-amber-100 bg-amber-50/50 p-6 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/10">
+          <div className="mb-4">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-gray-100">
+              <MessageCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              Insistencias para Pagadoras Fijas
+            </h2>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Tres opciones breves por perfil para conversaciones donde ya existe una conexión.</p>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            {insistencias.map((grupo, grupoIndex) => (
+              <article key={`${grupo.nombre}-${grupoIndex}`} className="rounded-xl border border-amber-100 bg-white p-4 dark:border-amber-900/40 dark:bg-gray-900">
+                <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-gray-100">{grupo.nombre}</h3>
+                <div className="space-y-3">
+                  {grupo.textos.map((texto, textoIndex) => (
+                    <div key={textoIndex} className="flex items-start gap-2 rounded-lg bg-amber-50/70 p-3 dark:bg-amber-950/20">
+                      <p className="flex-1 text-sm leading-relaxed text-gray-700 dark:text-gray-300">{texto}</p>
+                      <Button variant="ghost" size="icon" onClick={() => handleCopyText(texto, 1000 + grupoIndex * 3 + textoIndex)} className="h-7 w-7 shrink-0" title="Copiar insistencia">
+                        {copiedIndex === 1000 + grupoIndex * 3 + textoIndex ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Grid de Perfiles */}
       <div>

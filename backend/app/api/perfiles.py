@@ -153,9 +153,22 @@ ENFOQUE_POR_NOMBRE = {
     "luciano": "disfrute",
 }
 
+TEMAS_REACTIVACION = (
+    ("una canción que apareció de repente", "Hoy apareció una canción que tenía olvidada y me cambió el ánimo en segundos.", "Me dio curiosidad pensar cuál será esa canción que tú nunca saltas cuando empieza a sonar.", "¿cuál pondrías ahora mismo sin pensarlo mucho?"),
+    ("un olor que despertó un recuerdo", "Pasé cerca de un lugar con olor a pan recién hecho y por un momento se me olvidó todo lo demás.", "Es curioso cómo un olor sencillo puede traer una imagen completa a la cabeza y dejarte sonriendo.", "¿qué olor tiene ese efecto contigo?"),
+    ("una decisión pequeña pero difícil", "Hoy tardé demasiado eligiendo algo tan simple como qué comer y terminé riéndome de mi propia indecisión.", "En medio de eso pensé que tú seguramente tendrías una respuesta más clara que la mía.", "¿qué comida eliges cuando no quieres pensarlo demasiado?"),
+    ("algo gracioso visto durante el día", "Hoy vi a alguien discutir muy serio con una máquina que no aceptaba su moneda y tuve que disimular la risa.", "Esas escenas pequeñas rompen la rutina y enseguida dan ganas de contárselas a alguien.", "¿qué tontería te hizo reír últimamente?"),
+    ("una foto antigua encontrada sin buscar", "Buscando otra cosa apareció una foto antigua y terminé mirándola más tiempo del que pensaba.", "Me gustó ese salto inesperado a otro momento y me acordé de preguntarte por los recuerdos que guardas.", "¿qué foto tuya siempre logra sacarte una sonrisa?"),
+    ("una opinión cotidiana que divide", "Hoy salió la discusión absurda de si una película se disfruta más con comida o sin ninguna distracción.", "Defendí mi lado con demasiada seriedad y pensé que sería divertido saber de qué lado estás tú.", "¿eres de preparar algo para picar o de concentrarte por completo?"),
+    ("un pequeño logro del día", "Hoy terminé una tarea que llevaba días posponiendo y sentí una satisfacción desproporcionada.", "Ese alivio me hizo pensar en esas victorias pequeñas que casi nadie celebra, aunque cambian el día.", "¿qué cosa sencilla lograste últimamente y te dejó contenta?"),
+    ("una idea que apareció mientras se hacía algo rutinario", "Mientras ordenaba unas cosas se me ocurrió que las mejores conversaciones casi siempre empiezan por una tontería.", "Me acordé de ti y quise romper el silencio con algo menos automático que un simple saludo.", "¿qué pensamiento inesperado te rondó hoy por la cabeza?"),
+    ("un antojo inesperado", "Hoy me dio un antojo muy específico de algo que no tenía cerca y la imaginación no ayudó nada.", "Me acordé de esas preferencias tuyas que uno descubre conversando y quise venir a preguntarte.", "¿qué antojo consigue convencerte casi siempre?"),
+    ("una serie o historia que dejó una pregunta", "Una escena de una serie me dejó pensando si uno perdona más fácil una mentira o una verdad dicha demasiado tarde.", "No encontré una respuesta definitiva y pensé que tu forma de verlo podría sorprenderme.", "¿tú cuál de las dos perdonarías primero?"),
+)
+
 
 def _seleccionar_enfoques_saludos(nombres_perfiles: List[str]) -> List[dict]:
-    """Asigna un ángulo humano estable y rota el tema dentro de ese ángulo."""
+    """Asigna temas variados de reactivación; reserva el cuido para los extras."""
     seleccionados = []
     enfoques_por_clave = {enfoque["clave"]: enfoque for enfoque in ENFOQUES_SALUDOS}
     temas_disponibles = {
@@ -164,6 +177,7 @@ def _seleccionar_enfoques_saludos(nombres_perfiles: List[str]) -> List[dict]:
     }
     usos_por_enfoque = {enfoque["clave"]: 0 for enfoque in ENFOQUES_SALUDOS}
 
+    temas_reactivacion = random.sample(TEMAS_REACTIVACION, len(TEMAS_REACTIVACION))
     for indice, nombre in enumerate(nombres_perfiles):
         clave = ENFOQUE_POR_NOMBRE.get(nombre.strip().casefold())
         enfoque = enfoques_por_clave.get(clave) if clave else None
@@ -171,7 +185,7 @@ def _seleccionar_enfoques_saludos(nombres_perfiles: List[str]) -> List[dict]:
             enfoque = ENFOQUES_SALUDOS[indice % len(ENFOQUES_SALUDOS)]
         temas = temas_disponibles[enfoque["clave"]]
         uso = usos_por_enfoque[enfoque["clave"]]
-        tema = temas[uso % len(temas)]
+        tema = temas_reactivacion[indice % len(temas_reactivacion)]
         usos_por_enfoque[enfoque["clave"]] += 1
         seleccionados.append({**enfoque, "tema": tema})
 
@@ -179,6 +193,63 @@ def _seleccionar_enfoques_saludos(nombres_perfiles: List[str]) -> List[dict]:
         seleccionados.append({**enfoque, "tema": temas_disponibles[enfoque["clave"]][0]})
 
     return seleccionados
+
+
+def _crear_insistencias_fallback(nombres: List[str]) -> List[dict]:
+    bancos = (
+        "Me quedé pensando en algo que dijiste y me dio curiosidad saber cómo terminó tu día. Cuando puedas, cuéntame qué fue lo mejor que te pasó hoy.",
+        "Acabo de escuchar una canción que mejora cualquier momento y pensé en preguntarte por la tuya. ¿Cuál tienes repitiéndose últimamente?",
+        "Vine a dejarte una pregunta rápida porque contigo siempre salen respuestas interesantes: si pudieras borrar una sola tarea de esta semana, ¿cuál sería?",
+        "Hoy vi una escena tan absurda que me acordé de esas cosas pequeñas que uno quiere contar enseguida. ¿Qué te hizo reír de verdad estos días?",
+        "Se me cruzó una duda mientras preparaba algo de comer y pensé que tú podrías resolverla: ¿eres más de repetir tu plato favorito o probar algo nuevo?",
+        "No quería dejar pasar el día sin asomarme por aquí. Tengo curiosidad por saber qué te ha tenido más entretenida últimamente.",
+    )
+    resultados = []
+    for indice, nombre in enumerate(nombres):
+        inicio = (indice * 3) % len(bancos)
+        textos = [bancos[(inicio + offset) % len(bancos)] for offset in range(3)]
+        resultados.append({"nombre": nombre, "textos": textos})
+    return resultados
+
+
+def _generar_insistencias_perfiles(perfiles: List[dict]) -> List[dict]:
+    nombres = [p["nombre_perfil"] for p in perfiles]
+    perfiles_prompt = "\n".join(
+        f"{i}. {p['nombre_perfil']} — voz: {p.get('prompt_personalidad', '')[:500]}"
+        for i, p in enumerate(perfiles, start=1)
+    )
+    prompt = f"""Genera exactamente 3 insistencias para cada perfil de esta lista:
+{perfiles_prompt}
+
+Son mensajes para pagadoras fijas con las que se habla seguido y ya existe conexión. Cada insistencia debe ser un solo párrafo breve, cálido y natural. Retoma el contacto sin reclamar, presionar ni preguntar por qué no respondió. Usa un tema cotidiano distinto en cada texto, muestra atención real y termina con una pregunta fácil cuando encaje. Adapta suavemente la voz del perfil, pero no inventes información sobre la destinataria.
+
+FORMATO OBLIGATORIO:
+PERFIL: nombre exacto
+INSISTENCIA: texto
+INSISTENCIA: texto
+INSISTENCIA: texto
+
+No agregues números, introducciones ni explicaciones."""
+    try:
+        contenido = ai_service._llamar_proveedor(
+            "Escribes mensajes de chat naturales en español latinoamericano. Evita plantillas, lenguaje de IA, frases solemnes y halagos genéricos.",
+            prompt,
+        ).strip()
+        bloques = re.split(r"(?im)^PERFIL:\s*", contenido)[1:]
+        resultados = []
+        for bloque in bloques:
+            lineas = [linea.strip() for linea in bloque.splitlines() if linea.strip()]
+            if not lineas:
+                continue
+            nombre = lineas[0]
+            textos = [re.sub(r"(?i)^INSISTENCIA:\s*", "", linea) for linea in lineas[1:] if re.match(r"(?i)^INSISTENCIA:", linea)]
+            if len(textos) == 3:
+                resultados.append({"nombre": nombre, "textos": textos})
+        if len(resultados) == len(nombres):
+            return resultados
+    except Exception:
+        pass
+    return _crear_insistencias_fallback(nombres)
 
 
 def _extraer_bloques_saludos(contenido: str) -> List[str]:
@@ -377,7 +448,7 @@ async def get_ultimos_mensajes(perfil_id: UUID, current_user: UUID = Depends(get
 
 @router.post("/generar-saludos-rapidos")
 async def generar_saludos_rapidos(current_user: UUID = Depends(get_current_user)):
-    """Genera saludos nocturnos variados para los perfiles y dos extras de cuido."""
+    """Genera refrescamientos variados e insistencias para cada perfil."""
     perfiles = supabase_service.get_perfiles_by_usuario(current_user)
     if not perfiles:
         raise HTTPException(status_code=400, detail="Crea al menos un perfil para generar los saludos.")
@@ -395,22 +466,24 @@ async def generar_saludos_rapidos(current_user: UUID = Depends(get_current_user)
         for i, (nombre, enfoque) in enumerate(zip(nombres_salida, enfoques_asignados), start=1)
     )
     
-    system_prompt = """Eres un redactor experto en saludos nocturnos cercanos y humanos para chat.
+    system_prompt = """Eres un redactor experto en mensajes de reactivación cercanos y humanos para chat.
 Escribe en español latinoamericano natural. El resultado debe sentirse escrito por una persona atenta, no por una IA.
 Respeta literalmente los encabezados y temas dados. No uses datos biográficos, personalidad ni categoría de feed de los perfiles.
 No expliques tu proceso, no agregues introducciones y no uses bloques de código."""
     
-    prompt = f"""Genera un DOCUMENTO COMPLETO Y UNIFICADO con exactamente {n + 2} saludos que sirvan tanto de noche como de madrugada: uno para cada perfil registrado y dos perfiles extras de cuido al final.
+    prompt = f"""Genera un DOCUMENTO COMPLETO Y UNIFICADO con exactamente {n + 2} mensajes: un refrescamiento para cada perfil registrado y dos perfiles extras de cuido al final.
+
+Los refrescamientos se envían a pagadoras con las que se habla de vez en cuando para reactivar la conversación. No son saludos para desconocidas ni mensajes genéricos de buenas noches.
 
 PERFILES Y TEMA DIFERENTE ASIGNADO A CADA SALUDO:
 {asignaciones}
 
 PATRÓN HUMANO OBLIGATORIO:
 1. Cada perfil conserva el ÁNGULO asignado y desarrolla solamente su TEMA puntual. No uses la personalidad, gustos, edad, profesión, ubicación ni ningún otro dato del perfil.
-2. Párrafo 1: abre con una sensación física o emocional concreta vinculada al tema y enlázala con el motivo natural para pasar a saludar. Escribe 2 oraciones.
-3. Párrafo 2: desarrolla la intención de forma cercana y visual. Puede hablar de soltar el día, cuidar una parte del cuerpo, disfrutar una curiosidad o sentirse protegido, según el ángulo. Escribe 2 oraciones.
-4. Párrafo 3: expresa un deseo cálido para este instante y termina con UNA pregunta fácil, personal y directamente relacionada con el tema.
-5. El horario es contexto, no tema: todo debe funcionar igual de bien de noche o de madrugada. Puedes decir "a estas horas", "si sigues despierto" o "sea de noche o madrugada", pero no asegures que la otra persona va a dormir.
+2. Párrafo 1: abre contando una microanécdota cotidiana plausible: algo que viste, escuchaste, pensaste, cocinaste, elegiste o que te causó gracia. Enlázala con "me acordé de ti" o con el deseo de saber cómo está ella, pero varía esa fórmula.
+3. Párrafo 2: añade tu reacción u opinión de forma espontánea y muestra interés por cómo lo vive o piensa ella. Escribe como alguien que ya ha conversado con esa persona de vez en cuando.
+4. Párrafo 3: acércate con calidez y termina con UNA pregunta fácil y directamente relacionada con el tema, que dé ganas de contar algo propio.
+5. No centres todos los mensajes en descanso, noche, bienestar o autocuidado. Varía entre humor cotidiano, música, comida, recuerdos, decisiones pequeñas, películas, curiosidades, logros, manías y situaciones del día.
 6. Usa palabras comunes, imágenes sensoriales sencillas y un tono afectuoso. Evita lenguaje publicitario, moralejas, frases motivacionales, explicaciones abstractas y preguntas de entrevista.
 7. Varía los comienzos y las preguntas. No copies una misma frase entre saludos. Los perfiles extra sí deben expresar cuido, mimo, refugio, ternura y bienestar protector.
 
@@ -440,7 +513,15 @@ Antes de responder, verifica que estén los {n + 2} saludos completos, que debaj
             )
         except asyncio.TimeoutError:
             contenido = _crear_saludos_fallback(nombres_salida, enfoques_asignados)
-        
+
+        try:
+            insistencias = await asyncio.wait_for(
+                asyncio.to_thread(_generar_insistencias_perfiles, perfiles),
+                timeout=90.0,
+            )
+        except asyncio.TimeoutError:
+            insistencias = _crear_insistencias_fallback(nombres_perfiles)
+
         # Parsear los bloques individuales para visualización flexible
         partes = _extraer_bloques_saludos(contenido)
         
@@ -457,7 +538,8 @@ Antes de responder, verifica que estén los {n + 2} saludos completos, que debaj
             
         return {
             "documento_completo": contenido,
-            "saludos": saludos_individuales
+            "saludos": saludos_individuales,
+            "insistencias": insistencias,
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al generar saludos unificados: {str(e)}")

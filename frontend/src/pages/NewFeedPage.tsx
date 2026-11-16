@@ -119,7 +119,7 @@ export function NewFeedPage() {
             <div className="p-2 bg-purple-100 dark:bg-purple-900/40 rounded-lg"><Layout className="w-5 h-5 text-purple-600 dark:text-purple-400" /></div>
             Publicaciones
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">Publicaciones, respuestas y saludos generales para cualquier perfil.</p>
+          <p className="text-gray-500 dark:text-gray-400">Publicaciones y respuestas naturales para las interacciones del feed.</p>
         </div>
         <div className="flex items-end gap-3">
           <div className="flex flex-col">
