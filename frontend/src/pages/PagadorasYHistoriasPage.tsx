@@ -1060,16 +1060,14 @@ export function PagadorasYHistoriasPage() {
                                   onDragEnd={finishMarkerDrag}
                                   onClick={() => scrollToParagraph(idx)}
                                   className={cn(
-                                    "group/marker relative flex h-10 w-10 cursor-grab items-center justify-center rounded-xl border-2 border-white text-xs font-black text-white shadow-lg ring-2 ring-white transition-all hover:scale-110 active:cursor-grabbing dark:border-gray-950 dark:ring-gray-950",
+                                    "group/marker relative flex h-4 w-4 cursor-grab items-center justify-center rounded-full border-2 border-white shadow-md ring-2 ring-white transition-all hover:scale-125 active:cursor-grabbing dark:border-gray-950 dark:ring-gray-950",
                                     color.bg,
                                     draggingPagadora === pag && "scale-110 opacity-40"
                                   )}
                                   title={`${pag}: párrafo ${idx + 1}. Arrastra para mover`}
                                   aria-label={`Mover marcador de ${pag} desde el párrafo ${idx + 1}`}
                                 >
-                                  {pag.charAt(0).toUpperCase()}
-                                  <GripVertical className="absolute -right-1.5 -top-1.5 h-4 w-4 rounded-full bg-white p-0.5 text-gray-500 shadow dark:bg-gray-800 dark:text-gray-300" />
-                                  <span className="pointer-events-none absolute left-12 whitespace-nowrap rounded-lg bg-gray-950 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover/marker:opacity-100">
+                                  <span className="pointer-events-none absolute left-6 whitespace-nowrap rounded-lg bg-gray-950 px-2 py-1 text-[10px] font-semibold text-white opacity-0 shadow-lg transition-opacity group-hover/marker:opacity-100">
                                     {pag}
                                   </span>
                                 </button>
@@ -1361,7 +1359,6 @@ export function PagadorasYHistoriasPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {pagadoras.map((nombre) => {
-                  const color = getColorForPagadora(nombre);
                   const marcador = pagadorasMarcadores.find((m) => m.nombre_pagadora === nombre);
                   const posP = posicionesPagadoras[nombre];
 
@@ -1370,15 +1367,7 @@ export function PagadorasYHistoriasPage() {
                       key={nombre}
                       className="bg-white dark:bg-gray-900 rounded-2xl p-5 border border-gray-100 dark:border-gray-800 hover:shadow-md transition-all flex items-center justify-between"
                     >
-                      <div className="flex items-center gap-4">
-                        <div
-                          className={cn(
-                            "w-12 h-12 rounded-2xl flex items-center justify-center text-white font-bold text-xl shadow-sm",
-                            color.bg
-                          )}
-                        >
-                          {nombre.charAt(0).toUpperCase()}
-                        </div>
+                      <div className="flex items-center">
                         <div>
                           <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">{nombre}</h3>
                           <div className="flex flex-col gap-0.5 mt-1">
