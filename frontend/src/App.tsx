@@ -8,6 +8,7 @@ import { NewFeedPage } from './pages/NewFeedPage';
 import { PagadorasYHistoriasPage } from './pages/PagadorasYHistoriasPage';
 import { ConfiguracionPage } from './pages/ConfiguracionPage';
 import { PromptsPage } from './pages/PromptsPage';
+import { ControlTurnoPage } from './pages/ControlTurnoPage';
 import { useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/Toast';
 import { useServerStatus } from './hooks/useServerStatus';
@@ -70,6 +71,7 @@ export function App() {
         <Route element={<PrivateRoutes />}>
           <Route element={<Layout />}>
             <Route path="/perfiles" element={<PerfilesPage />} />
+            <Route path="/control-turno" element={<ControlTurnoPage />} />
             <Route path="/plan-trabajo" element={<PlanDeTrabajoPage />} />
             <Route path="/new-feed" element={<NewFeedPage />} />
             <Route path="/estudio" element={<PagadorasYHistoriasPage />} />

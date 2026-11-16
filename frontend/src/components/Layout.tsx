@@ -1,7 +1,7 @@
 ﻿import { useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../utils/helpers';
-import { Menu, X, LogOut, User, Settings, FileText, Layout as LayoutIcon, Sparkles, BookOpen, Moon, Sun, FileCode2 } from 'lucide-react';
+import { Menu, X, LogOut, User, Settings, FileText, Layout as LayoutIcon, Sparkles, BookOpen, Moon, Sun, FileCode2, ListChecks } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { Button } from './Button';
@@ -13,6 +13,7 @@ export function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = [
+    { path: '/control-turno', label: 'Control de Turno', icon: ListChecks },
     { path: '/perfiles', label: 'Perfiles', icon: User },
     { path: '/plan-trabajo', label: 'Plan de Trabajo', icon: FileText },
     { path: '/new-feed', label: 'Publicaciones', icon: LayoutIcon },
