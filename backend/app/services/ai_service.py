@@ -6,6 +6,7 @@ from app.models.schemas import TipoMensaje
 from typing import Dict, List
 import re
 from difflib import SequenceMatcher
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 TERMINOS_PROHIBIDOS = (
@@ -28,6 +29,13 @@ TERMINOS_PROHIBIDOS = (
     ("la vida nos enseña", re.compile(r"\bla\s+vida\s+nos\s+ense(?:ña|na)\b", re.IGNORECASE)),
     ("conexión genuina", re.compile(r"\bconexi(?:ó|o)n\s+genuina\b", re.IGNORECASE)),
     ("me hizo reflexionar", re.compile(r"\bme\s+hizo\s+reflexionar\b", re.IGNORECASE)),
+    ("esta mañana", re.compile(r"\b(?:esta|por\s+la|en\s+la)\s+ma(?:ñ|n)ana\b", re.IGNORECASE)),
+    ("esta tarde", re.compile(r"\b(?:esta|por\s+la|en\s+la)\s+tarde\b", re.IGNORECASE)),
+    ("buenos días", re.compile(r"\bbuenos\s+d(?:í|i)as\b", re.IGNORECASE)),
+    ("empezar el día", re.compile(r"\b(?:empezar|comenzar|iniciar|arrancar)\s+(?:bien\s+)?el\s+d(?:í|i)a\b", re.IGNORECASE)),
+    ("al despertar", re.compile(r"\bal\s+despertar\b", re.IGNORECASE)),
+    ("amanecer", re.compile(r"\bamanec(?:er|iendo|ió|io)\b", re.IGNORECASE)),
+    ("salió el sol", re.compile(r"\b(?:sali(?:ó|o)|sale|disfrutar|aprovechar)\s+(?:del?\s+)?sol\b", re.IGNORECASE)),
     (
         "alguna vez te has preguntado",
         re.compile(r"\balguna\s+vez\s+te\s+has\s+preguntado\b", re.IGNORECASE),
@@ -36,10 +44,19 @@ TERMINOS_PROHIBIDOS = (
 )
 
 
-# Solo el saludo general se reutiliza. Plan de Trabajo y New Feed deben respetar
-# la voz del perfil seleccionado y su historial para no parecer plantillas.
+# Este contenido debe poder usarse desde cualquier perfil. El perfil elegido en
+# la interfaz determina dónde se guarda el historial, no aporta datos al texto.
 TIPOS_CONTENIDO_GENERAL = {
     TipoMensaje.SALUDO,
+    TipoMensaje.ICEBREAKER,
+    TipoMensaje.CARTA_BARRIDO,
+    TipoMensaje.INSISTENCIA,
+    TipoMensaje.CARTA_ROMPEHIELOS,
+    TipoMensaje.RESPUESTAS_RAPIDAS,
+    TipoMensaje.POSTS,
+    TipoMensaje.SALUDO_PLAN_TRABAJO,
+    TipoMensaje.SALUDO_NEW_FEED,
+    TipoMensaje.INSISTENCIA_NEW_FEED,
 }
 
 
@@ -56,9 +73,8 @@ class AIService:
             raise ValueError(f"No API key configured for provider: {self.provider}")
 
     def generar_mensajes(self, prompt_personalidad: str, tipos: List[TipoMensaje], ultimos_mensajes: Dict[str, str] = None) -> Dict[str, str]:
-        """Genera mensajes adaptados a la voz del perfil seleccionado."""
-        mensajes = {}
-        for tipo in tipos:
+        """Genera en paralelo contenido humano, reutilizable y sin datos privados."""
+        def generar_tipo(tipo: TipoMensaje) -> tuple[str, str]:
             es_contenido_general = tipo in TIPOS_CONTENIDO_GENERAL
             system_prompt = self._construir_system_prompt(
                 "" if es_contenido_general else prompt_personalidad,
@@ -96,8 +112,15 @@ class AIService:
                 TipoMensaje.INSISTENCIA_NEW_FEED,
             }:
                 contenido = self._quitar_numeros_y_vinetas(contenido)
-            mensajes[tipo.value] = self._sanitizar_texto(contenido.strip())
+            return tipo.value, self._sanitizar_texto(contenido.strip())
 
+        mensajes = {}
+        max_workers = min(5, max(1, len(tipos)))
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futuros = {executor.submit(generar_tipo, tipo): tipo for tipo in tipos}
+            for futuro in as_completed(futuros):
+                clave, contenido = futuro.result()
+                mensajes[clave] = contenido
         return mensajes
 
     def _asegurar_dos_insistencias(self, contenido: str, system_prompt: str) -> str:
@@ -152,7 +175,7 @@ REGLAS:
 - El segundo párrafo debe avanzar la conversación con un detalle, opinión o ángulo nuevo; no repitas la escena ni la primera frase del anterior.
 - Usa aperturas y preguntas diferentes. No cambies únicamente la pregunta final.
 - Deben servir para retomar o continuar una conversación sin reclamar ni presionar.
-- Mantén la voz del perfil y no inventes datos sobre la destinataria.
+- Mantén una voz humana, cercana y neutral; no inventes datos sobre la destinataria.
 - No uses títulos, etiquetas, números, viñetas, introducciones ni explicaciones.
 - Devuelve solamente los dos párrafos consecutivos."""
         for _ in range(2):
@@ -404,7 +427,9 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
 - REEMPLAZA OBLIGATORIAMENTE "a veces" por "de vez en cuando" en cualquier contexto.
 - NO uses placeholders como [nombre], [Nombre], {{nombre}} o similares. Genera el contenido directo.
 - No inventes anécdotas, datos biográficos ni experiencias que no estén en la voz del perfil. Puedes expresar gustos u opiniones cotidianas sin presentarlos como hechos biográficos.
-- El mensaje debe poder enviarse a una destinataria nueva sin asumir confianza previa, recuerdos en común ni información que ella no haya contado.
+- No asumas hechos, recuerdos concretos ni información que la destinataria no haya contado. Cuando el tipo sea seguimiento o insistencia, transmite cercanía sin inventar una historia en común.
+- HORARIO NEUTRO OBLIGATORIO: todo mensaje debe poder enviarse indistintamente de noche o madrugada. No digas ni insinúes "esta mañana", "esta tarde", "buenos días", "empezar el día", "al despertar", "amanecer", "salió el sol", "disfruta el sol", "café de la mañana" ni actividades ligadas a una hora específica. Puedes usar "hoy", "ahora", "hace un rato", "en este momento" o "a estas horas".
+- No incluyas nombres, edad, profesión, ciudad, país, apariencia, gustos especializados, historia personal ni otros datos concretos del perfil o de la destinataria. Usa únicamente anécdotas y situaciones cotidianas plausibles que podrían ocurrirle a cualquier persona.
 - FORMATO PROHIBIDO: NUNCA uses el formato "Etiqueta: texto" o "Concepto: descripcion" o "Titulo: contenido". Escribe el contenido de forma directa y natural, como un mensaje real de chat. INCORRECTO: "Saludo: Hola, ¿como estas?". CORRECTO: "Hola, ¿como estas?".
 - Sé natural, auténtico y conversacional. Cada texto debe sonar espontáneo, específico y humano, no perfecto ni publicitario.
 - Evita frases genéricas, respuestas de manual y estructuras de listas con etiquetas.
@@ -443,16 +468,16 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
         # Plan de Trabajo y Publicaciones usan párrafos independientes, sin
         # numeración ni viñetas, para que cada mensaje pueda copiarse por separado.
         prompts.update({
-            TipoMensaje.ICEBREAKER: f"""Escribe EXACTAMENTE 4 rompehielos independientes en la voz del perfil. Son nuevos acercamientos para iniciar conversación con una mujer; no son respuestas a una charla anterior.
+            TipoMensaje.ICEBREAKER: f"""Escribe EXACTAMENTE 4 rompehielos independientes con voz humana, cercana y neutral. Son nuevos acercamientos para iniciar conversación con una mujer; no son respuestas a una charla anterior.
 
 Usa un tema diferente en cada uno, en este orden: {', '.join(temas_icebreaker_elegidos)}.
 
 Cada mensaje debe ser corto (entre 25 y 45 palabras), comenzar OBLIGATORIAMENTE con un único emoji relacionado con su tema y continuar con una observación cotidiana, una reacción personal honesta y una pregunta fácil y atractiva. La pregunta debe permitir que ella cuente algo propio; no debe parecer una encuesta ni una entrevista. Haz que los cuatro tengan emojis, aperturas, ritmos y cierres distintos.
 
 NO empieces con “hola, ¿cómo estás?”, “cuéntame de ti” ni “¿alguna vez te has preguntado...?”. NO escribas reflexiones profundas, moralejas, halagos sobre su físico ni datos enciclopédicos. No uses números, viñetas, títulos, etiquetas ni placeholders. Separa los mensajes con una línea en blanco y devuelve solamente los 4 párrafos.""",
-            TipoMensaje.CARTA_ROMPEHIELOS: "Genera UNA SOLA carta de rompehielos (Carta de IB) para el PLAN DE TRABAJO, escrita en la voz del perfil y de aproximadamente 350 caracteres (entre 300 y 400, contando espacios). Es una presentación informal: debe revelar un detalle humano o una manera de pensar, despertar interés y abrir la posibilidad de conversar. Termina con una pregunta natural. No debe sonar solemne, romántica prefabricada ni escrita por una IA. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente la carta en un párrafo.",
-            TipoMensaje.CARTA_BARRIDO: f"Genera EXACTAMENTE 2 cartas de barrido independientes para personas que tienen cartas activas. Escríbelas en la voz del perfil. Cada carta debe rondar los 350 caracteres (entre 300 y 400, contando espacios), ocupar un solo párrafo y separarse de la otra con una línea en blanco. Usa dos escenas diferentes relacionadas con {tema_barrido}; deben llamar la atención, mostrar interés real y terminar con una pregunta que busque respuesta. No reclames ni presiones. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente las 2 cartas.",
-            TipoMensaje.INSISTENCIA: f"Genera EXACTAMENTE 2 mensajes de insistencia CONSECUTIVOS para el PLAN DE TRABAJO, en la voz del perfil. Cada insistencia ocupa un solo párrafo breve y ambos párrafos deben estar separados únicamente por una línea en blanco. Los dos continúan un mismo hilo sobre {tema_insistencia}, pero el segundo debe avanzar hacia un detalle u opinión nueva sin repetir la introducción, la escena ni la pregunta del primero. Son seguimientos para buscar o continuar conversaciones: muestra interés, no reclames la falta de respuesta y termina con una pregunta sencilla. Personaliza con la voz del perfil, pero no inventes datos sobre la destinataria. NO uses números, viñetas, títulos, etiquetas, introducciones ni placeholders. Devuelve solamente los 2 párrafos.",
+            TipoMensaje.CARTA_ROMPEHIELOS: "Genera UNA SOLA carta de rompehielos (Carta de IB) para el PLAN DE TRABAJO, con voz humana, cercana y neutral, de aproximadamente 350 caracteres (entre 300 y 400, contando espacios). Es una presentación informal basada en una situación cotidiana universal: debe revelar una manera de pensar, despertar interés y abrir la posibilidad de conversar. Termina con una pregunta natural. No uses información específica del perfil ni de la destinataria. No debe sonar solemne, romántica prefabricada ni escrita por una IA. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente la carta en un párrafo.",
+            TipoMensaje.CARTA_BARRIDO: f"Genera EXACTAMENTE 2 cartas de barrido independientes para personas que tienen cartas activas, con voz humana, cercana y neutral. Cada carta debe rondar los 350 caracteres (entre 300 y 400, contando espacios), ocupar un solo párrafo y separarse de la otra con una línea en blanco. Usa dos escenas cotidianas universales diferentes relacionadas con {tema_barrido}; deben llamar la atención, mostrar interés real y terminar con una pregunta que busque respuesta. No uses datos específicos del perfil o la destinataria, no reclames ni presiones. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente las 2 cartas.",
+            TipoMensaje.INSISTENCIA: f"Genera EXACTAMENTE 2 mensajes de insistencia CONSECUTIVOS para el PLAN DE TRABAJO, con voz humana, cercana y neutral. Cada insistencia ocupa un solo párrafo breve y ambos párrafos deben estar separados únicamente por una línea en blanco. Los dos continúan un mismo hilo cotidiano y universal sobre {tema_insistencia}, pero el segundo debe avanzar hacia un detalle u opinión nueva sin repetir la introducción, la escena ni la pregunta del primero. Muestra interés, no reclames la falta de respuesta y termina con una pregunta sencilla. No uses datos específicos del perfil ni de la destinataria. NO uses números, viñetas, títulos, etiquetas, introducciones ni placeholders. Devuelve solamente los 2 párrafos.",
             TipoMensaje.RESPUESTAS_RAPIDAS: f"""Escribe EXACTAMENTE 3 respuestas rápidas generales e independientes para el módulo NEW FEED. Deben servir para reaccionar de forma natural a una publicación o comentario y abrir una conversación, sin asumir que ya existe confianza.
 
 Usa un gancho diferente en cada mensaje, en este orden: {', '.join(temas_rapidas_elegidos)}.
@@ -464,14 +489,14 @@ VARIEDAD OBLIGATORIA: cada respuesta debe usar un tema, escena, apertura, vocabu
 NO uses saludos vacíos como “hola, ¿cómo estás?”, halagos genéricos, datos enciclopédicos, acertijos, reflexiones profundas, frases motivacionales ni preguntas de entrevista. No declares sentimientos intensos ni confianza que todavía no existe. NO uses números, viñetas, títulos, etiquetas ni placeholders. Separa los mensajes con una línea en blanco y devuelve solamente los 3 párrafos.""",
             TipoMensaje.POSTS: f"""Prepara EXACTAMENTE 3 propuestas de fotografía para el NEW FEED del perfil. Cada propuesta debe abordar, en este orden, un ángulo distinto: {', '.join(temas_posts_elegidos)}.
 
-Para cada propuesta escribe primero un pie de foto breve, en primera persona y adaptado a la voz del perfil. Debe mostrar una actividad o situación cotidiana específica, sonar espontáneo y terminar OBLIGATORIAMENTE con una pregunta natural que anime a responder. Los tres pies deben tener temas, aperturas y preguntas diferentes. No redactes citas inspiradoras, consejos, discursos ni reflexiones vacías.
+Para cada propuesta escribe primero un pie de foto breve, en primera persona y con voz humana neutral. Debe mostrar una actividad o situación cotidiana universal, sonar espontáneo y terminar OBLIGATORIAMENTE con una pregunta natural que anime a responder. Los tres pies deben tener temas, aperturas y preguntas diferentes. No incluyas información específica del perfil y no redactes citas inspiradoras, consejos, discursos ni reflexiones vacías.
 
-Después de cada pie escribe exactamente la etiqueta PROMPT PARA CHATGPT: y, en la línea siguiente, un prompt completo para crear una fotografía vertical 4:5 relacionada. La escena debe parecer una foto personal, auténtica y difícil de encontrar en Google: incluye una acción cotidiana concreta, entorno vivido, encuadre natural, iluminación realista y pequeños detalles imperfectos. Evita imágenes de banco, poses publicitarias y composiciones genéricas. Respeta la apariencia y personalidad descritas en el perfil; si faltan datos visuales, no inventes rasgos físicos específicos. Redacta todo en español neutro y no pidas palabras, letras, logos ni marcas de agua. Si aparecen personas, deben ser adultas.
+Después de cada pie escribe exactamente la etiqueta PROMPT PARA CHATGPT: y, en la línea siguiente, un prompt completo para crear una fotografía vertical 4:5 relacionada. La escena debe parecer una foto personal, auténtica y difícil de encontrar en Google: incluye una acción cotidiana concreta, entorno vivido, encuadre natural, iluminación realista y pequeños detalles imperfectos. Evita imágenes de banco, poses publicitarias, composiciones genéricas y rasgos biográficos específicos. Redacta todo en español neutro y no pidas palabras, letras, logos ni marcas de agua. Si aparecen personas, deben ser adultas.
 
 Separa cada conjunto de publicación y prompt con una línea que contenga solamente ---. NO agregues imágenes sugeridas, recomendaciones de imágenes, enlaces, números, viñetas, títulos de publicación ni otras etiquetas. No uses placeholders. Devuelve solamente los tres conjuntos.""",
-            TipoMensaje.SALUDO_PLAN_TRABAJO: "Genera UN SOLO saludo en la voz del perfil para el PLAN DE TRABAJO. Inspírate en esta intención sin copiarla literalmente: creer que la química puede aparecer desde el primer mensaje, atreverse a dar el primer paso y preguntar si ella cree que podría existir esa química. Debe sonar humano, seguro y espontáneo, no como frase preparada. Termina con UNA pregunta. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
-            TipoMensaje.SALUDO_NEW_FEED: "Escribe EXACTAMENTE 1 saludo correspondiente a la voz del perfil para NEW FEED. Debe partir de un tema o situación cotidiana concreta, incluir una reacción u opinión personal, resultar natural e interesante y terminar con UNA pregunta fácil de responder. Debe funcionar de noche o madrugada. Evita 'hola, ¿cómo estás?' como mensaje completo, frases románticas prefabricadas y preguntas de entrevista. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
-            TipoMensaje.INSISTENCIA_NEW_FEED: "Escribe EXACTAMENTE 2 insistencias CONSECUTIVAS en la voz del perfil para contactos con los que se pueda retomar la conversación. Cada una debe ocupar un solo párrafo breve y ambos párrafos deben estar separados únicamente por una línea en blanco. Mantén el mismo hilo cotidiano en las dos, pero haz que la segunda avance con un detalle, opinión o ángulo nuevo; no repitas la apertura, la escena ni la pregunta del primer párrafo. Muestra interés real y deja una vía fácil para continuar hablando. No reclames la falta de respuesta ni presiones. Personaliza según la voz del perfil y una conversación posible, pero no inventes datos concretos sobre el contacto. Deben funcionar de noche o madrugada. NO uses números, viñetas, títulos, etiquetas, introducciones ni placeholders. Devuelve solamente los 2 párrafos.",
+            TipoMensaje.SALUDO_PLAN_TRABAJO: "Genera UN SOLO saludo humano, seguro y neutral para el PLAN DE TRABAJO. Inspírate en esta intención sin copiarla literalmente: creer que la química puede aparecer desde el primer mensaje, atreverse a dar el primer paso y preguntar si ella cree que podría existir esa química. No uses información específica del perfil ni de la destinataria y no suenes como una frase preparada. Debe funcionar de noche o madrugada y terminar con UNA pregunta. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
+            TipoMensaje.SALUDO_NEW_FEED: "Escribe EXACTAMENTE 1 saludo humano y neutral para NEW FEED. Debe partir de una anécdota o situación cotidiana que podría ocurrirle a cualquiera, incluir una reacción u opinión personal, invitar a conversar y terminar con UNA pregunta fácil de responder. No uses información específica del perfil ni de la destinataria. Debe funcionar de noche o madrugada. Evita 'hola, ¿cómo estás?' como mensaje completo, frases románticas prefabricadas y preguntas de entrevista. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
+            TipoMensaje.INSISTENCIA_NEW_FEED: "Escribe EXACTAMENTE 2 insistencias CONSECUTIVAS, humanas y neutrales, para contactos con los que se pueda retomar la conversación. Cada una debe ocupar un solo párrafo breve y ambos párrafos deben estar separados únicamente por una línea en blanco. Mantén el mismo hilo cotidiano universal en las dos, pero haz que la segunda avance con un detalle, opinión o ángulo nuevo; no repitas la apertura, la escena ni la pregunta del primer párrafo. Muestra interés real y deja una vía fácil para continuar hablando. No reclames la falta de respuesta, no presiones y no uses información específica del perfil o del contacto. Deben funcionar de noche o madrugada. NO uses números, viñetas, títulos, etiquetas, introducciones ni placeholders. Devuelve solamente los 2 párrafos.",
         })
         return prompts.get(tipo, "Genera un mensaje apropiado y adaptado a las reglas estipuladas.")
 
