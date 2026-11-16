@@ -85,10 +85,9 @@ class AIService:
                 "" if es_contenido_general else prompt_personalidad,
             )
             
-            # El historial también evita que el contenido reutilizable vuelva
-            # siempre a los mismos temas. Los mensajes generales guardados no
-            # contienen información privada del perfil.
-            if ultimos_mensajes and tipo.value in ultimos_mensajes:
+            # El historial de versiones antiguas puede contener datos del
+            # perfil. Nunca se incorpora al contenido general reutilizable.
+            if not es_contenido_general and ultimos_mensajes and tipo.value in ultimos_mensajes:
                 anterior = ultimos_mensajes[tipo.value][:500]  # máx 500 chars del anterior
                 prompt = f"IMPORTANTE: El siguiente contenido fue generado anteriormente. NO lo repitas ni uses las mismas frases o ideas:\n---\n{anterior}\n---\n\n{prompt}"
             
@@ -430,6 +429,8 @@ REGLAS GENERALES Y ESTRICTAS (OBLIGATORIAS):
 - No asumas hechos, recuerdos concretos ni información que la destinataria no haya contado. Cuando el tipo sea seguimiento o insistencia, transmite cercanía sin inventar una historia en común.
 - HORARIO NEUTRO OBLIGATORIO: todo mensaje debe poder enviarse indistintamente de noche o madrugada. No digas ni insinúes "esta mañana", "esta tarde", "buenos días", "empezar el día", "al despertar", "amanecer", "salió el sol", "disfruta el sol", "café de la mañana" ni actividades ligadas a una hora específica. Puedes usar "hoy", "ahora", "hace un rato", "en este momento" o "a estas horas".
 - No incluyas nombres, edad, profesión, ciudad, país, apariencia, gustos especializados, historia personal ni otros datos concretos del perfil o de la destinataria. Usa únicamente anécdotas y situaciones cotidianas plausibles que podrían ocurrirle a cualquier persona.
+- IGNORA por completo cualquier dato del perfil aunque aparezca en instrucciones anteriores, historial o contexto. No menciones trabajo, estudios, familiares, hijos, mascotas, vehículos, viajes, nacionalidad, ubicación, rasgos físicos, aficiones especializadas ni experiencias biográficas.
+- Las microanécdotas solo pueden usar acciones universales y de bajo riesgo, como escuchar una canción, elegir qué comer, ordenar algo, ver una escena graciosa, recordar una película o equivocarse en una tarea sencilla. No conviertas la anécdota en información estable sobre quien escribe.
 - FORMATO PROHIBIDO: NUNCA uses el formato "Etiqueta: texto" o "Concepto: descripcion" o "Titulo: contenido". Escribe el contenido de forma directa y natural, como un mensaje real de chat. INCORRECTO: "Saludo: Hola, ¿como estas?". CORRECTO: "Hola, ¿como estas?".
 - Sé natural, auténtico y conversacional. Cada texto debe sonar espontáneo, específico y humano, no perfecto ni publicitario.
 - Evita frases genéricas, respuestas de manual y estructuras de listas con etiquetas.
