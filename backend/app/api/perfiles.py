@@ -221,7 +221,7 @@ def _generar_insistencias_perfiles(perfiles: List[dict]) -> List[dict]:
     prompt = f"""Genera exactamente 3 insistencias para cada perfil de esta lista:
 {perfiles_prompt}
 
-Son mensajes para pagadoras fijas con las que se habla seguido y ya existe conexión. Cada insistencia debe ser un solo párrafo breve, cálido y natural. Retoma el contacto sin reclamar, presionar ni preguntar por qué no respondió. Usa un tema cotidiano distinto en cada texto, muestra atención real y termina con una pregunta fácil cuando encaje. Adapta suavemente la voz del perfil, pero no inventes información sobre la destinataria.
+Son mensajes para pagadoras fijas con las que se habla seguido y ya existe conexión. Cada insistencia debe ser un solo párrafo breve, cálido y natural. Retoma el contacto sin reclamar, presionar ni preguntar por qué no respondió. Usa un tema cotidiano distinto en cada texto, muestra atención real y termina con una pregunta fácil cuando encaje. Adapta suavemente la voz del perfil, pero no inventes información sobre la destinataria. Deben funcionar igual de bien de noche o de madrugada: evita referencias que solo tengan sentido antes de dormir, al despertar o en una hora concreta.
 
 FORMATO OBLIGATORIO:
 PERFIL: nombre exacto
@@ -474,6 +474,7 @@ No expliques tu proceso, no agregues introducciones y no uses bloques de código
     prompt = f"""Genera un DOCUMENTO COMPLETO Y UNIFICADO con exactamente {n + 2} mensajes: un refrescamiento para cada perfil registrado y dos perfiles extras de cuido al final.
 
 Los refrescamientos se envían a pagadoras con las que se habla de vez en cuando para reactivar la conversación. No son saludos para desconocidas ni mensajes genéricos de buenas noches.
+Todos deben poder enviarse indistintamente de noche o de madrugada. No supongas que ella va a dormir, acaba de despertar o está realizando una actividad propia de una hora específica.
 
 PERFILES Y TEMA DIFERENTE ASIGNADO A CADA SALUDO:
 {asignaciones}

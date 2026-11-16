@@ -324,15 +324,26 @@ export function PerfilesPage() {
         )}
       </div>
 
-      {insistencias.length > 0 && (
-        <section className="rounded-2xl border border-amber-100 bg-amber-50/50 p-6 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/10">
+      <section className="rounded-2xl border border-amber-100 bg-amber-50/50 p-6 shadow-sm dark:border-amber-900/40 dark:bg-amber-950/10">
           <div className="mb-4">
             <h2 className="flex items-center gap-2 text-lg font-bold text-gray-900 dark:text-gray-100">
               <MessageCircle className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               Insistencias para Pagadoras Fijas
             </h2>
-            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Tres opciones breves por perfil para conversaciones donde ya existe una conexión.</p>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Tres opciones breves por perfil para conversaciones donde ya existe una conexión. Funcionan de noche o madrugada.</p>
           </div>
+          {perfiles.length === 0 ? (
+            <p className="py-5 text-center text-sm italic text-gray-500 dark:text-gray-400">Crea al menos un perfil para generar insistencias.</p>
+          ) : insistencias.length === 0 ? (
+            <div className="py-6 text-center">
+              <MessageCircle className="mx-auto mb-2 h-10 w-10 text-amber-300 opacity-60 dark:text-amber-700" />
+              <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">Aún no hay insistencias generadas. Renueva los mensajes para crear tres por cada perfil.</p>
+              <Button onClick={handleRenovarSaludos} disabled={renovandoSaludos} size="sm" className="bg-amber-600 text-white hover:bg-amber-700">
+                {renovandoSaludos ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                Generar saludos e insistencias
+              </Button>
+            </div>
+          ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {insistencias.map((grupo, grupoIndex) => (
               <article key={`${grupo.nombre}-${grupoIndex}`} className="rounded-xl border border-amber-100 bg-white p-4 dark:border-amber-900/40 dark:bg-gray-900">
@@ -350,8 +361,8 @@ export function PerfilesPage() {
               </article>
             ))}
           </div>
+          )}
         </section>
-      )}
 
       {/* Grid de Perfiles */}
       <div>
