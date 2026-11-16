@@ -114,7 +114,24 @@ class AIService:
             if len(parrafos) != 2 or any(len(parrafo.split()) < 12 for parrafo in parrafos):
                 return False
             normalizados = [re.sub(r"[^a-záéíóúüñ0-9 ]", "", p.casefold()) for p in parrafos]
-            return SequenceMatcher(None, normalizados[0], normalizados[1]).ratio() < 0.5
+            if SequenceMatcher(None, normalizados[0], normalizados[1]).ratio() >= 0.42:
+                return False
+
+            palabras_vacias = {
+                "a", "algo", "al", "con", "como", "cuando", "de", "del", "el", "ella",
+                "en", "esa", "ese", "esta", "este", "fue", "ha", "hoy", "la", "las", "le",
+                "lo", "los", "me", "mi", "muy", "o", "para", "pero", "por", "que", "qué",
+                "se", "sin", "su", "te", "tu", "tú", "un", "una", "y", "ya", "yo",
+            }
+            temas = []
+            for texto in normalizados:
+                temas.append({
+                    palabra for palabra in texto.split()
+                    if len(palabra) >= 5 and palabra not in palabras_vacias
+                })
+            # Compartir varias palabras relevantes suele indicar que la IA solo
+            # cambió la pregunta final manteniendo la misma escena.
+            return len(temas[0] & temas[1]) <= 1
 
         parrafos = extraer(contenido)
         if es_valido(parrafos):
@@ -129,6 +146,8 @@ REGLAS:
 - Cada insistencia ocupa un solo párrafo breve.
 - Separa los dos párrafos únicamente con una línea en blanco.
 - Usa un tema, apertura y pregunta diferentes en cada párrafo.
+- No reutilices en ambos párrafos el mismo objeto, bebida, comida, actividad, momento del día o escena central.
+- Si un párrafo habla de café, desayuno o mañana, el otro debe tratar un asunto completamente ajeno.
 - Deben servir para retomar o continuar una conversación sin reclamar ni presionar.
 - Mantén la voz del perfil y no inventes datos sobre la destinataria.
 - No uses títulos, etiquetas, números, viñetas, introducciones ni explicaciones.
