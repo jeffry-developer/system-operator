@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.models.schemas import TipoMensaje
 from typing import Dict, List
 import re
+from difflib import SequenceMatcher
 
 
 TERMINOS_PROHIBIDOS = (
@@ -78,6 +79,10 @@ class AIService:
             contenido = self._llamar_ia(system_prompt, prompt)
             if tipo == TipoMensaje.ICEBREAKER:
                 contenido = self._asegurar_emoji_en_rompehielos(contenido)
+            if tipo == TipoMensaje.RESPUESTAS_RAPIDAS:
+                contenido = self._asegurar_respuestas_rapidas_distintas(contenido, system_prompt)
+            if tipo in {TipoMensaje.INSISTENCIA, TipoMensaje.INSISTENCIA_NEW_FEED}:
+                contenido = self._asegurar_dos_insistencias(contenido, system_prompt)
             if tipo in {
                 TipoMensaje.SALUDO,
                 TipoMensaje.ICEBREAKER,
@@ -94,6 +99,102 @@ class AIService:
             mensajes[tipo.value] = self._sanitizar_texto(contenido.strip())
 
         return mensajes
+
+    def _asegurar_dos_insistencias(self, contenido: str, system_prompt: str) -> str:
+        """Garantiza dos insistencias consecutivas, independientes y sin etiquetas."""
+        def extraer(texto: str) -> List[str]:
+            limpio = self._quitar_numeros_y_vinetas(texto)
+            return [
+                " ".join(bloque.split())
+                for bloque in re.split(r"\n\s*\n+", limpio.strip())
+                if bloque.strip()
+            ]
+
+        def es_valido(parrafos: List[str]) -> bool:
+            if len(parrafos) != 2 or any(len(parrafo.split()) < 12 for parrafo in parrafos):
+                return False
+            normalizados = [re.sub(r"[^a-záéíóúüñ0-9 ]", "", p.casefold()) for p in parrafos]
+            return SequenceMatcher(None, normalizados[0], normalizados[1]).ratio() < 0.5
+
+        parrafos = extraer(contenido)
+        if es_valido(parrafos):
+            return "\n\n".join(parrafos)
+
+        correccion = f"""Reescribe el borrador como EXACTAMENTE DOS insistencias consecutivas.
+
+BORRADOR:
+{contenido}
+
+REGLAS:
+- Cada insistencia ocupa un solo párrafo breve.
+- Separa los dos párrafos únicamente con una línea en blanco.
+- Usa un tema, apertura y pregunta diferentes en cada párrafo.
+- Deben servir para retomar o continuar una conversación sin reclamar ni presionar.
+- Mantén la voz del perfil y no inventes datos sobre la destinataria.
+- No uses títulos, etiquetas, números, viñetas, introducciones ni explicaciones.
+- Devuelve solamente los dos párrafos consecutivos."""
+        for _ in range(2):
+            corregido = self._llamar_ia(system_prompt, correccion)
+            parrafos = extraer(corregido)
+            if es_valido(parrafos):
+                return "\n\n".join(parrafos)
+            correccion = f"El resultado sigue sin tener exactamente dos párrafos diferentes. Corrígelo y devuelve solo los dos párrafos:\n{corregido}"
+
+        return (
+            "Me quedé pensando en esas pequeñas cosas que cambian por completo el ánimo de un día y me dio curiosidad saber de ti. ¿Qué detalle inesperado te sacó una sonrisa últimamente?\n\n"
+            "Hoy escuché una canción que llevaba tiempo sin aparecer y terminé recordando momentos que creía olvidados. ¿Hay alguna canción que siempre consiga llevarte a un recuerdo bonito?"
+        )
+
+    def _asegurar_respuestas_rapidas_distintas(self, contenido: str, system_prompt: str) -> str:
+        """Exige tres aperturas diferentes y corrige repeticiones del proveedor."""
+        def extraer(texto: str) -> List[str]:
+            return [
+                " ".join(bloque.split())
+                for bloque in re.split(r"\n\s*\n+", texto.strip())
+                if bloque.strip()
+            ]
+
+        def es_valido(respuestas: List[str]) -> bool:
+            if len(respuestas) != 3:
+                return False
+            normalizadas = [re.sub(r"[^a-záéíóúüñ0-9 ]", "", r.casefold()) for r in respuestas]
+            aperturas = {" ".join(r.split()[:7]) for r in normalizadas}
+            if len(aperturas) != 3 or any("?" not in respuesta for respuesta in respuestas):
+                return False
+            return all(
+                SequenceMatcher(None, normalizadas[i], normalizadas[j]).ratio() < 0.48
+                for i in range(3)
+                for j in range(i + 1, 3)
+            )
+
+        respuestas = extraer(contenido)
+        if es_valido(respuestas):
+            return "\n\n".join(respuestas)
+
+        correccion = f"""Las respuestas rápidas siguientes no cumplen porque son repetitivas o no son exactamente tres:
+
+{contenido}
+
+Reescríbelas desde cero como EXACTAMENTE 3 mensajes independientes, separados por una línea en blanco.
+- Usa un tema totalmente diferente en cada uno: 1) una escena graciosa o curiosa, 2) música/serie/película, 3) una elección cotidiana divertida.
+- Cada mensaje debe tener una apertura, vocabulario, ritmo y pregunta final diferentes.
+- No repitas café, desayuno ni ninguna escena entre mensajes.
+- No empieces dos mensajes con la misma pregunta o las mismas siete palabras.
+- Cada uno debe tener entre 20 y 45 palabras, sonar espontáneo y dejar abierta la conversación.
+- No uses números, títulos, etiquetas ni viñetas. Devuelve solamente los tres párrafos."""
+
+        for _ in range(2):
+            corregido = self._llamar_ia(system_prompt, correccion)
+            respuestas = extraer(corregido)
+            if es_valido(respuestas):
+                return "\n\n".join(respuestas)
+            correccion = f"Todavía no son tres mensajes suficientemente diferentes. Rehazlos por completo siguiendo todas las reglas anteriores. Borrador inválido:\n{corregido}"
+
+        return "\n\n".join((
+            "Hoy vi a alguien intentar abrir una puerta empujando cuando decía ‘hale’ y me dio risa porque todos hemos pasado por algo así. ¿Qué despiste reciente te hizo reír de ti misma?",
+            "Se me quedó una canción pegada sin saber siquiera toda la letra, pero ya logró cambiarme el ánimo. ¿Cuál es esa canción que últimamente aparece en tu cabeza sin pedir permiso?",
+            "Tengo una discusión ligera pendiente: cuando una serie está muy buena, ¿prefieres verla completa de una vez o guardar capítulos para que dure más? Yo siempre digo que esperaré y termino fallando.",
+        ))
 
     @staticmethod
     def _asegurar_emoji_en_rompehielos(contenido: str) -> str:
@@ -329,12 +430,14 @@ Cada mensaje debe ser corto (entre 25 y 45 palabras), comenzar OBLIGATORIAMENTE 
 NO empieces con “hola, ¿cómo estás?”, “cuéntame de ti” ni “¿alguna vez te has preguntado...?”. NO escribas reflexiones profundas, moralejas, halagos sobre su físico ni datos enciclopédicos. No uses números, viñetas, títulos, etiquetas ni placeholders. Separa los mensajes con una línea en blanco y devuelve solamente los 4 párrafos.""",
             TipoMensaje.CARTA_ROMPEHIELOS: "Genera UNA SOLA carta de rompehielos (Carta de IB) para el PLAN DE TRABAJO, escrita en la voz del perfil y de aproximadamente 350 caracteres (entre 300 y 400, contando espacios). Es una presentación informal: debe revelar un detalle humano o una manera de pensar, despertar interés y abrir la posibilidad de conversar. Termina con una pregunta natural. No debe sonar solemne, romántica prefabricada ni escrita por una IA. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente la carta en un párrafo.",
             TipoMensaje.CARTA_BARRIDO: f"Genera EXACTAMENTE 2 cartas de barrido independientes para personas que tienen cartas activas. Escríbelas en la voz del perfil. Cada carta debe rondar los 350 caracteres (entre 300 y 400, contando espacios), ocupar un solo párrafo y separarse de la otra con una línea en blanco. Usa dos escenas diferentes relacionadas con {tema_barrido}; deben llamar la atención, mostrar interés real y terminar con una pregunta que busque respuesta. No reclames ni presiones. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente las 2 cartas.",
-            TipoMensaje.INSISTENCIA: f"Genera EXACTAMENTE 2 mensajes de insistencia para el PLAN DE TRABAJO, en la voz del perfil, cada uno como un párrafo breve e independiente y separados por una línea en blanco. Usa ángulos distintos relacionados con {tema_insistencia}. Son seguimientos para buscar o continuar conversaciones: muestra interés, no reclames la falta de respuesta y termina con una pregunta sencilla. Personaliza con la voz del perfil, pero no inventes datos sobre la destinataria. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente los 2 mensajes.",
+            TipoMensaje.INSISTENCIA: f"Genera EXACTAMENTE 2 mensajes de insistencia CONSECUTIVOS para el PLAN DE TRABAJO, en la voz del perfil. Cada insistencia ocupa un solo párrafo breve y ambos párrafos deben estar separados únicamente por una línea en blanco. Usa ángulos distintos relacionados con {tema_insistencia}. Son seguimientos para buscar o continuar conversaciones: muestra interés, no reclames la falta de respuesta y termina con una pregunta sencilla. Personaliza con la voz del perfil, pero no inventes datos sobre la destinataria. NO uses números, viñetas, títulos, etiquetas, introducciones ni placeholders. Devuelve solamente los 2 párrafos.",
             TipoMensaje.RESPUESTAS_RAPIDAS: f"""Escribe EXACTAMENTE 3 respuestas rápidas generales e independientes para el módulo NEW FEED. Deben servir para reaccionar de forma natural a una publicación o comentario y abrir una conversación, sin asumir que ya existe confianza.
 
 Usa un gancho diferente en cada mensaje, en este orden: {', '.join(temas_rapidas_elegidos)}.
 
 Cada mensaje debe tener entre 20 y 45 palabras. Reacciona con una opinión o comentario concreto y enlázalo con UNA pregunta sencilla que invite a responder. Debe sentirse escrito en el momento por una persona real, no como una frase preparada para ligar. Los tres mensajes deben tener estructuras distintas.
+
+VARIEDAD OBLIGATORIA: cada respuesta debe usar un tema, escena, apertura, vocabulario y tipo de pregunta completamente diferentes. Está prohibido reutilizar el mismo objeto, comida, bebida, actividad o situación en dos mensajes. No empieces dos respuestas con las mismas palabras.
 
 NO uses saludos vacíos como “hola, ¿cómo estás?”, halagos genéricos, datos enciclopédicos, acertijos, reflexiones profundas, frases motivacionales ni preguntas de entrevista. No declares sentimientos intensos ni confianza que todavía no existe. NO uses números, viñetas, títulos, etiquetas ni placeholders. Separa los mensajes con una línea en blanco y devuelve solamente los 3 párrafos.""",
             TipoMensaje.POSTS: f"""Prepara EXACTAMENTE 3 propuestas de fotografía para el NEW FEED del perfil. Cada propuesta debe abordar, en este orden, un ángulo distinto: {', '.join(temas_posts_elegidos)}.
@@ -346,7 +449,7 @@ Después de cada pie escribe exactamente la etiqueta PROMPT PARA CHATGPT: y, en 
 Separa cada conjunto de publicación y prompt con una línea que contenga solamente ---. NO agregues imágenes sugeridas, recomendaciones de imágenes, enlaces, números, viñetas, títulos de publicación ni otras etiquetas. No uses placeholders. Devuelve solamente los tres conjuntos.""",
             TipoMensaje.SALUDO_PLAN_TRABAJO: "Genera UN SOLO saludo en la voz del perfil para el PLAN DE TRABAJO. Inspírate en esta intención sin copiarla literalmente: creer que la química puede aparecer desde el primer mensaje, atreverse a dar el primer paso y preguntar si ella cree que podría existir esa química. Debe sonar humano, seguro y espontáneo, no como frase preparada. Termina con UNA pregunta. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
             TipoMensaje.SALUDO_NEW_FEED: "Escribe EXACTAMENTE 1 saludo correspondiente a la voz del perfil para NEW FEED. Debe partir de un tema o situación cotidiana concreta, incluir una reacción u opinión personal, resultar natural e interesante y terminar con UNA pregunta fácil de responder. Debe funcionar de noche o madrugada. Evita 'hola, ¿cómo estás?' como mensaje completo, frases románticas prefabricadas y preguntas de entrevista. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente el párrafo.",
-            TipoMensaje.INSISTENCIA_NEW_FEED: "Escribe EXACTAMENTE 2 insistencias en la voz del perfil para contactos con los que se pueda retomar la conversación. Cada una debe ser un párrafo breve e independiente; sepáralas con una línea en blanco. Usa temas distintos, muestra interés real y deja una vía fácil para continuar hablando. No reclames la falta de respuesta ni presiones. Personaliza según la voz del perfil y una conversación posible, pero no inventes datos concretos sobre el contacto. Deben funcionar de noche o madrugada. NO uses números, viñetas, títulos, etiquetas ni placeholders. Devuelve solamente los 2 mensajes.",
+            TipoMensaje.INSISTENCIA_NEW_FEED: "Escribe EXACTAMENTE 2 insistencias CONSECUTIVAS en la voz del perfil para contactos con los que se pueda retomar la conversación. Cada una debe ocupar un solo párrafo breve y ambos párrafos deben estar separados únicamente por una línea en blanco. Usa temas distintos, muestra interés real y deja una vía fácil para continuar hablando. No reclames la falta de respuesta ni presiones. Personaliza según la voz del perfil y una conversación posible, pero no inventes datos concretos sobre el contacto. Deben funcionar de noche o madrugada. NO uses números, viñetas, títulos, etiquetas, introducciones ni placeholders. Devuelve solamente los 2 párrafos.",
         })
         return prompts.get(tipo, "Genera un mensaje apropiado y adaptado a las reglas estipuladas.")
 
