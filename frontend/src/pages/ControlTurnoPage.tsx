@@ -87,6 +87,14 @@ const TASKS: ShiftTask[] = [
     icon: Sparkles,
     accent: 'text-blue-600 bg-blue-100 dark:text-blue-300 dark:bg-blue-950/60',
   },
+  {
+    id: 'capture-final',
+    title: 'Enviar capture final',
+    description: 'Después de terminar las cartas y los New Feeds, envía el capture final como evidencia del trabajo completo.',
+    priority: true,
+    icon: Camera,
+    accent: 'text-emerald-600 bg-emerald-100 dark:text-emerald-300 dark:bg-emerald-950/60',
+  },
 ];
 
 function shiftDate(date = new Date()) {

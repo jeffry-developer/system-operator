@@ -340,7 +340,7 @@ export function PerfilesPage() {
               <p className="mb-3 text-sm text-gray-500 dark:text-gray-400">Aún no hay insistencias generadas. Renueva los mensajes para crear tres por cada perfil.</p>
               <Button onClick={handleRenovarSaludos} disabled={renovandoSaludos} size="sm" className="bg-amber-600 text-white hover:bg-amber-700">
                 {renovandoSaludos ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                Generar saludos e insistencias
+                Generar insistencias
               </Button>
             </div>
           ) : (
