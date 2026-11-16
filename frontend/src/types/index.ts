@@ -119,12 +119,12 @@ export const TIPO_MENSAJE_LABELS: Record<TipoMensaje, string> = {
   insistencia: 'Mensajes de Insistencia',
   carta_rompehielos: 'Carta de Rompehielos',
   respuestas_rapidas: 'Respuestas Rápidas',
-  posts: 'Publicaciones',
+  posts: '3 Fotos y Pies de Foto',
   carta_romantica: 'Cartas Románticas/Sexys',
   dinamica_juego: 'Dinámicas y Juegos',
-  saludo_plan_trabajo: 'Saludo (Plan Trabajo)',
-  saludo_new_feed: 'Saludo (Publicaciones)',
-  insistencia_new_feed: 'Insistencia (Publicaciones)',
+  saludo_plan_trabajo: 'Saludo',
+  saludo_new_feed: 'Saludo',
+  insistencia_new_feed: 'Insistencias',
 };
 
 export const TIPO_MENSAJE_ICONS: Record<TipoMensaje, string> = {

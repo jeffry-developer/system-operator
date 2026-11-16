@@ -8,13 +8,13 @@ import { Button } from '../components/Button';
 import { copyToClipboard } from '../utils/helpers';
 import { CopyableParagraphs } from '../components/CopyableParagraphs';
 
-const NEW_FEED_TIPOS: TipoMensaje[] = ['posts', 'respuestas_rapidas', 'insistencia_new_feed', 'saludo_new_feed'];
+const NEW_FEED_TIPOS: TipoMensaje[] = ['posts', 'respuestas_rapidas', 'saludo_new_feed', 'insistencia_new_feed'];
 
 const FEED_META: Record<string, { label: string; color: string; bg: string; border: string; Icon: any }> = {
-  posts: { label: 'Publicaciones y prompts', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-100 dark:border-purple-900/40', Icon: Layout },
+  posts: { label: '3 Fotos y Pies de Foto', color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50 dark:bg-purple-900/20', border: 'border-purple-100 dark:border-purple-900/40', Icon: Layout },
   respuestas_rapidas: { label: 'Respuestas Rápidas', color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/20', border: 'border-blue-100 dark:border-blue-900/40', Icon: Zap },
   insistencia_new_feed: { label: 'Mensajes de Insistencia', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-900/20', border: 'border-amber-100 dark:border-amber-900/40', Icon: MessageCircle },
-  saludo_new_feed: { label: 'Saludo', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-100 dark:border-green-900/40', Icon: MessageSquare },
+  saludo_new_feed: { label: 'Saludo (1)', color: 'text-green-600 dark:text-green-400', bg: 'bg-green-50 dark:bg-green-900/20', border: 'border-green-100 dark:border-green-900/40', Icon: MessageSquare },
 };
 
 function splitPostBlocks(content: string) {

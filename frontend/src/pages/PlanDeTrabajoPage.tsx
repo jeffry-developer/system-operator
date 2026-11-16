@@ -7,7 +7,7 @@ import { Button } from "../components/Button";
 import { copyToClipboard } from "../utils/helpers";
 import { CopyableParagraphs } from "../components/CopyableParagraphs";
 
-const PLAN_TRABAJO: TipoMensaje[] = ["icebreaker", "carta_rompehielos", "carta_barrido", "insistencia", "saludo"];
+const PLAN_TRABAJO: TipoMensaje[] = ["icebreaker", "carta_rompehielos", "carta_barrido", "insistencia", "saludo_plan_trabajo"];
 
 export function PlanDeTrabajoPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);

@@ -612,10 +612,10 @@ async def generar_new_feed(perfil_id: UUID, current_user: UUID = Depends(get_cur
 
         # Generar todos los tipos del new feed
         tipos_feed = [
-            TipoMensaje.RESPUESTAS_RAPIDAS,
-            TipoMensaje.INSISTENCIA_NEW_FEED,
-            TipoMensaje.SALUDO_NEW_FEED,
             TipoMensaje.POSTS,
+            TipoMensaje.RESPUESTAS_RAPIDAS,
+            TipoMensaje.SALUDO_NEW_FEED,
+            TipoMensaje.INSISTENCIA_NEW_FEED,
         ]
         
         mensajes = await asyncio.wait_for(
@@ -627,17 +627,17 @@ async def generar_new_feed(perfil_id: UUID, current_user: UUID = Depends(get_cur
         supabase_service_admin.save_mensajes(mensajes, perfil_id)
         
         # Formatear respuesta como documento único
-        feed_completo = f"""------------------------(Respuestas Rapidas)---------------------------
+        feed_completo = f"""------------------------(3 Fotos y Pies de Foto)---------------------------
+{mensajes.get("posts", "")}
+
+------------------------(3 Respuestas Rapidas)---------------------------
 {mensajes.get("respuestas_rapidas", "")}
 
-------------------------(Mensajes de insistencia)------------------------
-{mensajes.get("insistencia_new_feed", "")}
-
--------------------------(Saludo)-------------------------------
+-------------------------(1 Saludo)-------------------------------
 {mensajes.get("saludo_new_feed", "")}
 
---------------------------(Posts)-------------------------------
-{mensajes.get("posts", "")}"""
+------------------------(2 Mensajes de insistencia)------------------------
+{mensajes.get("insistencia_new_feed", "")}"""
         
         return {"perfil_id": str(perfil_id), "new_feed": feed_completo, "mensajes": mensajes}
         

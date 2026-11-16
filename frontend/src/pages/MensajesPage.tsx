@@ -6,8 +6,8 @@ import { Perfil, TipoMensaje, TIPO_MENSAJE_LABELS, TIPO_MENSAJE_ICONS } from '..
 import { Button } from '../components/Button';
 import { copyToClipboard } from '../utils/helpers';
 
-const PLAN_TRABAJO: TipoMensaje[] = ['icebreaker', 'carta_rompehielos', 'carta_barrido', 'insistencia', 'saludo'];
-const NEW_FEED: TipoMensaje[] = ['respuestas_rapidas', 'insistencia', 'saludo', 'posts'];
+const PLAN_TRABAJO: TipoMensaje[] = ['icebreaker', 'carta_rompehielos', 'carta_barrido', 'insistencia', 'saludo_plan_trabajo'];
+const NEW_FEED: TipoMensaje[] = ['posts', 'respuestas_rapidas', 'saludo_new_feed', 'insistencia_new_feed'];
 
 export function MensajesPage() {
   const [perfiles, setPerfiles] = useState<Perfil[]>([]);
