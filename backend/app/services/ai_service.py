@@ -5,6 +5,7 @@ from app.core.config import settings
 from app.models.schemas import TipoMensaje
 from typing import Dict, List
 import re
+import time
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -113,10 +114,23 @@ class AIService:
                 contenido = self._quitar_numeros_y_vinetas(contenido)
             return tipo.value, self._sanitizar_texto(contenido.strip())
 
+        def generar_con_reintento(tipo: TipoMensaje) -> tuple[str, str]:
+            ultimo_error = None
+            for intento in range(2):
+                try:
+                    return generar_tipo(tipo)
+                except Exception as exc:
+                    ultimo_error = exc
+                    if intento == 0:
+                        time.sleep(0.75)
+            raise ultimo_error
+
         mensajes = {}
-        max_workers = min(5, max(1, len(tipos)))
+        # Dos solicitudes concurrentes reducen el tiempo sin saturar los
+        # límites del proveedor ni compartir demasiadas conexiones a la vez.
+        max_workers = min(2, max(1, len(tipos)))
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futuros = {executor.submit(generar_tipo, tipo): tipo for tipo in tipos}
+            futuros = {executor.submit(generar_con_reintento, tipo): tipo for tipo in tipos}
             for futuro in as_completed(futuros):
                 clave, contenido = futuro.result()
                 mensajes[clave] = contenido
@@ -177,8 +191,11 @@ REGLAS:
 - Mantén una voz humana, cercana y neutral; no inventes datos sobre la destinataria.
 - No uses títulos, etiquetas, números, viñetas, introducciones ni explicaciones.
 - Devuelve solamente los dos párrafos consecutivos."""
-        for _ in range(2):
-            corregido = self._llamar_ia(system_prompt, correccion)
+        for _ in range(1):
+            try:
+                corregido = self._llamar_ia(system_prompt, correccion)
+            except Exception:
+                break
             parrafos = extraer(corregido)
             if es_valido(parrafos):
                 return "\n\n".join(parrafos)
@@ -227,8 +244,11 @@ Reescríbelas desde cero como EXACTAMENTE 3 mensajes independientes, separados p
 - Cada uno debe tener entre 20 y 45 palabras, sonar espontáneo y dejar abierta la conversación.
 - No uses números, títulos, etiquetas ni viñetas. Devuelve solamente los tres párrafos."""
 
-        for _ in range(2):
-            corregido = self._llamar_ia(system_prompt, correccion)
+        for _ in range(1):
+            try:
+                corregido = self._llamar_ia(system_prompt, correccion)
+            except Exception:
+                break
             respuestas = extraer(corregido)
             if es_valido(respuestas):
                 return "\n\n".join(respuestas)

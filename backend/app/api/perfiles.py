@@ -412,7 +412,7 @@ async def generar_mensajes(perfil_id: UUID, request: MessageRequest, current_use
                 request.tipos,
                 ultimos  # Pasar historial para evitar repetición
             ),
-            timeout=120.0  # 2 minutos máximo
+            timeout=180.0
         )
         
     except asyncio.TimeoutError:
@@ -568,7 +568,7 @@ async def generar_plan_trabajo(perfil_id: UUID, current_user: UUID = Depends(get
         
         mensajes = await asyncio.wait_for(
             asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], tipos_plan, ultimos),
-            timeout=120.0
+            timeout=180.0
         )
         
         # Guardar en base de datos
@@ -620,7 +620,7 @@ async def generar_new_feed(perfil_id: UUID, current_user: UUID = Depends(get_cur
         
         mensajes = await asyncio.wait_for(
             asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], tipos_feed, ultimos),
-            timeout=120.0
+            timeout=180.0
         )
         
         # Guardar en base de datos

@@ -93,7 +93,7 @@ export function NewFeedPage() {
       const result = await api.generarMensajes(selectedPerfilId, tipos);
       setMensajes(prev => ({ ...prev, ...result.mensajes }));
       success('Generado exitosamente');
-    } catch { showError('Error al generar'); }
+    } catch (err: any) { showError(err.response?.data?.detail || err.message || 'Error al generar'); }
     finally { setGeneratingTypes(prev => { const n = new Set(prev); n.delete(groupId); return n; }); }
   };
 
