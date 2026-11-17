@@ -65,13 +65,18 @@ TIPOS_CONTENIDO_GENERAL = {
 class AIService:
     def __init__(self):
         self.provider = settings.AI_PROVIDER.lower()
+        self.gemini_client = None
+        self.groq_client = None
+        self.gemini_model_name = "gemini-3.8-flash"
 
-        if self.provider == "gemini" and settings.GEMINI_API_KEY:
+        if settings.GEMINI_API_KEY:
             self.gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            self.gemini_model_name = "gemini-3.8-flash"
-        elif self.provider == "groq" and settings.GROQ_API_KEY:
+        if settings.GROQ_API_KEY:
             self.groq_client = Groq(api_key=settings.GROQ_API_KEY)
-        else:
+
+        if self.provider == "gemini" and not self.gemini_client:
+            raise ValueError("No API key configured for provider: gemini")
+        if self.provider == "groq" and not self.groq_client:
             raise ValueError(f"No API key configured for provider: {self.provider}")
 
     def generar_mensajes(self, prompt_personalidad: str, tipos: List[TipoMensaje], ultimos_mensajes: Dict[str, str] = None) -> Dict[str, str]:
@@ -173,7 +178,8 @@ INSTRUCCIONES POR CLAVE:
                 return mensajes
             except Exception as exc:
                 ultimo_error = exc
-        raise ValueError(f"No se pudo generar el contenido en un solo lote: {ultimo_error}")
+        # La disponibilidad del proveedor nunca debe detener el turno completo.
+        return {tipo.value: self._fallback_general(tipo) for tipo in tipos}
 
     def _llamar_proveedor_json(self, system_prompt: str, user_prompt: str, claves: List[str]) -> str:
         """Usa JSON estructurado en Gemini y una respuesta JSON normal en Groq."""
@@ -184,18 +190,23 @@ INSTRUCCIONES POR CLAVE:
             "properties": {clave: {"type": "string"} for clave in claves},
             "required": claves,
         }
-        response = self.gemini_client.models.generate_content(
-            model=self.gemini_model_name,
-            contents=user_prompt,
-            config=genai_types.GenerateContentConfig(
-                system_instruction=system_prompt,
-                temperature=0.8,
-                max_output_tokens=6000,
-                response_mime_type="application/json",
-                response_schema=schema,
-            ),
-        )
-        return response.text if response.text else ""
+        try:
+            response = self.gemini_client.models.generate_content(
+                model=self.gemini_model_name,
+                contents=user_prompt,
+                config=genai_types.GenerateContentConfig(
+                    system_instruction=system_prompt,
+                    temperature=0.8,
+                    max_output_tokens=6000,
+                    response_mime_type="application/json",
+                    response_schema=schema,
+                ),
+            )
+            return response.text if response.text else ""
+        except Exception:
+            if self.groq_client:
+                return self._llamar_groq(system_prompt, user_prompt)
+            raise
 
     @staticmethod
     def _neutralizar_referencias_horarias(contenido: str) -> str:
@@ -636,9 +647,19 @@ TEXTO:
 
     def _llamar_proveedor(self, system_prompt: str, user_prompt: str) -> str:
         if self.provider == "gemini":
-            return self._llamar_gemini(system_prompt, user_prompt)
+            try:
+                return self._llamar_gemini(system_prompt, user_prompt)
+            except Exception:
+                if self.groq_client:
+                    return self._llamar_groq(system_prompt, user_prompt)
+                raise
         elif self.provider == "groq":
-            return self._llamar_groq(system_prompt, user_prompt)
+            try:
+                return self._llamar_groq(system_prompt, user_prompt)
+            except Exception:
+                if self.gemini_client:
+                    return self._llamar_gemini(system_prompt, user_prompt)
+                raise
         return ""
 
     def _buscar_terminos_prohibidos(self, texto: str) -> List[str]:
