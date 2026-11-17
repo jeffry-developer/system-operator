@@ -6,6 +6,7 @@ from app.models.schemas import TipoMensaje
 from typing import Dict, List
 import re
 import time
+import unicodedata
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -112,6 +113,8 @@ class AIService:
                 TipoMensaje.INSISTENCIA_NEW_FEED,
             }:
                 contenido = self._quitar_numeros_y_vinetas(contenido)
+            if es_contenido_general and self._contiene_datos_del_perfil(contenido, prompt_personalidad):
+                raise ValueError("El contenido incluyó información específica del perfil y fue descartado")
             return tipo.value, self._sanitizar_texto(contenido.strip())
 
         def generar_con_reintento(tipo: TipoMensaje) -> tuple[str, str]:
@@ -135,6 +138,37 @@ class AIService:
                 clave, contenido = futuro.result()
                 mensajes[clave] = contenido
         return mensajes
+
+    @staticmethod
+    def _contiene_datos_del_perfil(contenido: str, prompt_personalidad: str) -> bool:
+        """Detecta localmente términos distintivos del perfil en texto general."""
+        if not contenido or not prompt_personalidad:
+            return False
+
+        def normalizar(texto: str) -> List[str]:
+            texto = unicodedata.normalize("NFKD", texto.casefold())
+            texto = "".join(char for char in texto if not unicodedata.combining(char))
+            return re.findall(r"[a-z0-9]+", texto)
+
+        # Palabras de instrucciones o conversación que no representan datos
+        # biográficos. Todo término distintivo restante queda bloqueado.
+        comunes = {
+            "adulta", "adulto", "alegre", "amable", "amor", "apasionado", "autentico",
+            "carta", "cercana", "cercano", "chat", "conversacion", "conversar", "creativo",
+            "detalle", "divertida", "divertido", "dulce", "emocional", "escribe", "espanol",
+            "estilo", "formal", "frase", "gusta", "gustos", "hablar", "humano", "interes",
+            "interesante", "latino", "latinoamericano", "lenguaje", "mensaje", "mujer", "natural",
+            "neutral", "parrafo", "perfil", "persona", "personalidad", "pregunta", "respuesta",
+            "romantico", "sencillo", "sensual", "situacion", "texto", "tono", "palabras",
+            "siempre", "tambien", "tiene", "desde", "cuando", "donde", "porque", "puede",
+            "quiere", "hacer", "forma", "cosas", "sobre", "entre", "mucho", "poco",
+        }
+        terminos_perfil = {
+            palabra for palabra in normalizar(prompt_personalidad)
+            if len(palabra) >= 5 and palabra not in comunes
+        }
+        terminos_salida = set(normalizar(contenido))
+        return bool(terminos_perfil & terminos_salida)
 
     def _asegurar_dos_insistencias(self, contenido: str, system_prompt: str) -> str:
         """Garantiza dos insistencias consecutivas, independientes y sin etiquetas."""
