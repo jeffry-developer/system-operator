@@ -183,7 +183,6 @@ INSTRUCCIONES POR CLAVE:
             "type": "object",
             "properties": {clave: {"type": "string"} for clave in claves},
             "required": claves,
-            "additionalProperties": False,
         }
         response = self.gemini_client.models.generate_content(
             model=self.gemini_model_name,
