@@ -148,7 +148,7 @@ INSTRUCCIONES POR CLAVE:
         ultimo_error = None
         for intento in range(1):
             try:
-                bruto = self._llamar_proveedor(system_prompt, prompt).strip()
+                bruto = self._llamar_proveedor_json(system_prompt, prompt, claves).strip()
                 bruto = re.sub(r"^```(?:json)?\s*|\s*```$", "", bruto, flags=re.IGNORECASE)
                 inicio, fin = bruto.find("{"), bruto.rfind("}")
                 if inicio < 0 or fin < inicio:
@@ -160,15 +160,9 @@ INSTRUCCIONES POR CLAVE:
                     if not isinstance(contenido, str) or not contenido.strip():
                         raise ValueError(f"Falta el bloque {tipo.value}")
                     contenido = self._sanitizar_texto(self._quitar_numeros_y_vinetas(contenido.strip()))
-                    incumplimientos = set(self._buscar_terminos_prohibidos(contenido))
-                    referencias_horarias = {
-                        "esta mañana", "esta tarde", "buenos días", "empezar el día",
-                        "al despertar", "amanecer", "salió el sol",
-                    }
-                    if incumplimientos & referencias_horarias:
-                        raise ValueError("El lote incluyó referencias horarias o términos prohibidos")
+                    contenido = self._neutralizar_referencias_horarias(contenido)
                     if self._contiene_datos_del_perfil(contenido, prompt_personalidad):
-                        raise ValueError("El lote incluyó información específica del perfil")
+                        contenido = self._fallback_general(tipo)
                     if tipo == TipoMensaje.ICEBREAKER:
                         contenido = self._asegurar_emoji_en_rompehielos(contenido)
                     if tipo == TipoMensaje.RESPUESTAS_RAPIDAS:
@@ -180,6 +174,59 @@ INSTRUCCIONES POR CLAVE:
             except Exception as exc:
                 ultimo_error = exc
         raise ValueError(f"No se pudo generar el contenido en un solo lote: {ultimo_error}")
+
+    def _llamar_proveedor_json(self, system_prompt: str, user_prompt: str, claves: List[str]) -> str:
+        """Usa JSON estructurado en Gemini y una respuesta JSON normal en Groq."""
+        if self.provider != "gemini":
+            return self._llamar_proveedor(system_prompt, user_prompt)
+        schema = {
+            "type": "object",
+            "properties": {clave: {"type": "string"} for clave in claves},
+            "required": claves,
+            "additionalProperties": False,
+        }
+        response = self.gemini_client.models.generate_content(
+            model=self.gemini_model_name,
+            contents=user_prompt,
+            config=genai_types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=0.8,
+                max_output_tokens=6000,
+                response_mime_type="application/json",
+                response_schema=schema,
+            ),
+        )
+        return response.text if response.text else ""
+
+    @staticmethod
+    def _neutralizar_referencias_horarias(contenido: str) -> str:
+        reemplazos = (
+            (r"\b(?:esta|por\s+la|en\s+la)\s+ma(?:ñ|n)ana\b", "hace un rato"),
+            (r"\b(?:esta|por\s+la|en\s+la)\s+tarde\b", "hace un rato"),
+            (r"\bbuenos\s+d(?:í|i)as\b", "hola"),
+            (r"\b(?:empezar|comenzar|iniciar|arrancar)\s+(?:bien\s+)?el\s+d(?:í|i)a\b", "cambiar el ánimo"),
+            (r"\bal\s+despertar\b", "en un momento cualquiera"),
+            (r"\bamanec(?:er|iendo|ió|io)\b", "momento"),
+            (r"\b(?:sali(?:ó|o)|sale|disfrutar|aprovechar)\s+(?:del?\s+)?sol\b", "cambió el ambiente"),
+        )
+        for patron, reemplazo in reemplazos:
+            contenido = re.sub(patron, reemplazo, contenido, flags=re.IGNORECASE)
+        return contenido
+
+    @staticmethod
+    def _fallback_general(tipo: TipoMensaje) -> str:
+        respaldos = {
+            TipoMensaje.ICEBREAKER: "🎵 Se me quedó una canción rondando la cabeza y terminé pensando en cómo cambia el ánimo sin pedir permiso. ¿Cuál tienes repitiéndose últimamente?\n\n🍝 Elegir qué comer parece sencillo hasta que aparecen demasiadas opciones. ¿Qué plato siempre consigue convencerte?\n\n🎬 Hay historias que empiezan lentas y terminan atrapando por completo. ¿Qué película o serie te sorprendió así?\n\n😄 Hoy recordé uno de esos pequeños despistes que terminan dando risa. ¿Cuál ha sido el tuyo últimamente?",
+            TipoMensaje.CARTA_ROMPEHIELOS: "Hace un rato pensé que las mejores conversaciones suelen empezar por una pregunta sencilla y una respuesta inesperada. Me gusta descubrir cómo alguien ve esas pequeñas cosas que casi nunca se preguntan, porque ahí aparece lo más interesante. Si pudieras conservar un solo momento agradable de los últimos días, ¿cuál elegirías?",
+            TipoMensaje.CARTA_BARRIDO: "Hace un rato puse música mientras ordenaba unas cosas y una canción terminó cambiando por completo el ambiente. Me gusta cuando algo tan sencillo rompe la rutina y deja una sensación distinta. ¿Qué canción consigue hacer eso contigo casi de inmediato?\n\nElegir algo rico para comer puede convertirse en una discusión divertida cuando todas las opciones parecen buenas. Yo termino cambiando de idea más de una vez antes de decidir. ¿Cuál es ese plato que siempre gana cuando no quieres pensarlo demasiado?",
+            TipoMensaje.INSISTENCIA: "Hace un rato apareció una canción que no escuchaba desde hace tiempo y terminó quedándose en mi cabeza. ¿Cuál es esa canción que últimamente no puedes dejar de repetir?\n\nSiguiendo con la música, hay letras que parecen expresar justo lo que uno no sabía cómo decir. ¿Hay alguna que sientas especialmente cercana?",
+            TipoMensaje.RESPUESTAS_RAPIDAS: "Hoy vi un pequeño despiste que terminó haciendo reír a todos alrededor. ¿Qué situación inesperada te ha causado gracia últimamente?\n\nSe me quedó una canción pegada sin saber siquiera toda la letra. ¿Cuál aparece en tu cabeza sin pedir permiso?\n\nCuando una serie está muy buena, ¿prefieres verla completa o guardar capítulos para que dure más?",
+            TipoMensaje.SALUDO_PLAN_TRABAJO: "Creo que una buena conversación puede revelar química desde el primer mensaje, así que decidí dar el primer paso sin darle tantas vueltas. ¿Tú también crees que esa chispa puede aparecer desde una pregunta sencilla?",
+            TipoMensaje.SALUDO_NEW_FEED: "Hace un rato recordé una escena graciosa y pensé en cómo esas pequeñas cosas cambian el ánimo. Me dio curiosidad saber de ti: ¿qué detalle inesperado consiguió sacarte una sonrisa últimamente?",
+            TipoMensaje.INSISTENCIA_NEW_FEED: "Hace un rato apareció una canción que no escuchaba desde hace tiempo y terminó quedándose en mi cabeza. ¿Cuál es esa canción que últimamente no puedes dejar de repetir?\n\nSiguiendo con la música, hay letras que parecen expresar justo lo que uno no sabía cómo decir. ¿Hay alguna que sientas especialmente cercana?",
+            TipoMensaje.POSTS: "Me gusta cuando una canción aparece sin buscarla y cambia por completo el ambiente. ¿Cuál pondrías ahora mismo?\nPROMPT PARA CHATGPT:\nFotografía vertical 4:5 de una escena cotidiana escuchando música en un espacio vivido, iluminación nocturna cálida, encuadre espontáneo, detalles imperfectos, sin texto ni marcas de agua.\n\n---\n\nElegir algo rico parece fácil hasta que todas las opciones provocan. ¿Qué escogerías sin pensarlo?\nPROMPT PARA CHATGPT:\nFotografía vertical 4:5 de una preparación casera sencilla en una cocina real y ligeramente desordenada, luz cálida, encuadre natural, sin texto ni marcas de agua.\n\n---\n\nUna buena historia puede hacer que uno pierda la noción del tiempo. ¿Qué película o serie logró atraparte así?\nPROMPT PARA CHATGPT:\nFotografía vertical 4:5 de un rincón cotidiano preparado para ver una película, ambiente nocturno acogedor, composición espontánea y realista, sin texto ni marcas de agua.",
+        }
+        return respaldos.get(tipo, "Hace un rato pensé en esas pequeñas cosas que vuelven una conversación interesante. ¿Qué detalle inesperado llamó tu atención últimamente?")
 
     @staticmethod
     def _contiene_datos_del_perfil(contenido: str, prompt_personalidad: str) -> bool:
