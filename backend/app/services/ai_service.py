@@ -5,8 +5,8 @@ from app.core.config import settings
 from app.models.schemas import TipoMensaje
 from typing import Dict, List
 import re
-import time
 import unicodedata
+import json
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -76,6 +76,9 @@ class AIService:
 
     def generar_mensajes(self, prompt_personalidad: str, tipos: List[TipoMensaje], ultimos_mensajes: Dict[str, str] = None) -> Dict[str, str]:
         """Genera en paralelo contenido humano, reutilizable y sin datos privados."""
+        if len(tipos) > 1 and all(tipo in TIPOS_CONTENIDO_GENERAL for tipo in tipos):
+            return self._generar_lote_general(tipos, prompt_personalidad)
+
         def generar_tipo(tipo: TipoMensaje) -> tuple[str, str]:
             es_contenido_general = tipo in TIPOS_CONTENIDO_GENERAL
             system_prompt = self._construir_system_prompt(
@@ -117,27 +120,66 @@ class AIService:
                 raise ValueError("El contenido incluyó información específica del perfil y fue descartado")
             return tipo.value, self._sanitizar_texto(contenido.strip())
 
-        def generar_con_reintento(tipo: TipoMensaje) -> tuple[str, str]:
-            ultimo_error = None
-            for intento in range(2):
-                try:
-                    return generar_tipo(tipo)
-                except Exception as exc:
-                    ultimo_error = exc
-                    if intento == 0:
-                        time.sleep(0.75)
-            raise ultimo_error
-
         mensajes = {}
-        # Dos solicitudes concurrentes reducen el tiempo sin saturar los
-        # límites del proveedor ni compartir demasiadas conexiones a la vez.
-        max_workers = min(2, max(1, len(tipos)))
+        max_workers = 1
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futuros = {executor.submit(generar_con_reintento, tipo): tipo for tipo in tipos}
+            futuros = {executor.submit(generar_tipo, tipo): tipo for tipo in tipos}
             for futuro in as_completed(futuros):
                 clave, contenido = futuro.result()
                 mensajes[clave] = contenido
         return mensajes
+
+    def _generar_lote_general(self, tipos: List[TipoMensaje], prompt_personalidad: str) -> Dict[str, str]:
+        """Genera todos los bloques solicitados con una sola llamada al proveedor."""
+        system_prompt = self._construir_system_prompt("", contenido_general=True)
+        instrucciones = []
+        for tipo in tipos:
+            instrucciones.append(f"CLAVE {tipo.value}:\n{self._construir_prompt_tipo(tipo, '')}")
+        claves = [tipo.value for tipo in tipos]
+        instrucciones_texto = "\n\n".join(instrucciones)
+        prompt = f"""Genera todos los bloques solicitados en UNA SOLA respuesta.
+
+Devuelve exclusivamente un objeto JSON válido con estas claves exactas: {json.dumps(claves, ensure_ascii=False)}.
+Cada valor debe ser un string. Representa las separaciones entre párrafos dentro del string con \\n\\n. No uses bloques de código, comentarios ni texto fuera del JSON.
+
+INSTRUCCIONES POR CLAVE:
+{instrucciones_texto}"""
+
+        ultimo_error = None
+        for intento in range(1):
+            try:
+                bruto = self._llamar_proveedor(system_prompt, prompt).strip()
+                bruto = re.sub(r"^```(?:json)?\s*|\s*```$", "", bruto, flags=re.IGNORECASE)
+                inicio, fin = bruto.find("{"), bruto.rfind("}")
+                if inicio < 0 or fin < inicio:
+                    raise ValueError("La IA no devolvió el JSON esperado")
+                datos = json.loads(bruto[inicio:fin + 1])
+                mensajes = {}
+                for tipo in tipos:
+                    contenido = datos.get(tipo.value)
+                    if not isinstance(contenido, str) or not contenido.strip():
+                        raise ValueError(f"Falta el bloque {tipo.value}")
+                    contenido = self._sanitizar_texto(self._quitar_numeros_y_vinetas(contenido.strip()))
+                    incumplimientos = set(self._buscar_terminos_prohibidos(contenido))
+                    referencias_horarias = {
+                        "esta mañana", "esta tarde", "buenos días", "empezar el día",
+                        "al despertar", "amanecer", "salió el sol",
+                    }
+                    if incumplimientos & referencias_horarias:
+                        raise ValueError("El lote incluyó referencias horarias o términos prohibidos")
+                    if self._contiene_datos_del_perfil(contenido, prompt_personalidad):
+                        raise ValueError("El lote incluyó información específica del perfil")
+                    if tipo == TipoMensaje.ICEBREAKER:
+                        contenido = self._asegurar_emoji_en_rompehielos(contenido)
+                    if tipo == TipoMensaje.RESPUESTAS_RAPIDAS:
+                        contenido = self._asegurar_respuestas_rapidas_distintas(contenido, system_prompt)
+                    if tipo in {TipoMensaje.INSISTENCIA, TipoMensaje.INSISTENCIA_NEW_FEED}:
+                        contenido = self._asegurar_dos_insistencias(contenido, system_prompt)
+                    mensajes[tipo.value] = contenido
+                return mensajes
+            except Exception as exc:
+                ultimo_error = exc
+        raise ValueError(f"No se pudo generar el contenido en un solo lote: {ultimo_error}")
 
     @staticmethod
     def _contiene_datos_del_perfil(contenido: str, prompt_personalidad: str) -> bool:
@@ -168,7 +210,17 @@ class AIService:
             if len(palabra) >= 5 and palabra not in comunes
         }
         terminos_salida = set(normalizar(contenido))
-        return bool(terminos_perfil & terminos_salida)
+        coincidencias = terminos_perfil & terminos_salida
+
+        nombres_ignorados = {"perfil", "escribe", "persona", "hombre", "mujer", "tono", "estilo"}
+        posibles_nombres = {
+            normalizar(token)[0]
+            for token in re.findall(r"\b[A-ZÁÉÍÓÚÜÑ][a-záéíóúüñ]{3,}\b", prompt_personalidad)
+            if normalizar(token) and normalizar(token)[0] not in nombres_ignorados
+        }
+        # Un nombre propio nunca puede aparecer. Para vocabulario común se
+        # exigen dos coincidencias, evitando falsos positivos por una palabra.
+        return bool(posibles_nombres & terminos_salida) or len(coincidencias) >= 2
 
     def _asegurar_dos_insistencias(self, contenido: str, system_prompt: str) -> str:
         """Garantiza dos insistencias consecutivas, independientes y sin etiquetas."""
@@ -210,31 +262,6 @@ class AIService:
         if es_valido(parrafos):
             return "\n\n".join(parrafos)
 
-        correccion = f"""Reescribe el borrador como EXACTAMENTE DOS insistencias consecutivas.
-
-BORRADOR:
-{contenido}
-
-REGLAS:
-- Cada insistencia ocupa un solo párrafo breve.
-- Separa los dos párrafos únicamente con una línea en blanco.
-- Mantén un mismo hilo cotidiano en ambos párrafos para que se sientan relacionados.
-- El segundo párrafo debe avanzar la conversación con un detalle, opinión o ángulo nuevo; no repitas la escena ni la primera frase del anterior.
-- Usa aperturas y preguntas diferentes. No cambies únicamente la pregunta final.
-- Deben servir para retomar o continuar una conversación sin reclamar ni presionar.
-- Mantén una voz humana, cercana y neutral; no inventes datos sobre la destinataria.
-- No uses títulos, etiquetas, números, viñetas, introducciones ni explicaciones.
-- Devuelve solamente los dos párrafos consecutivos."""
-        for _ in range(1):
-            try:
-                corregido = self._llamar_ia(system_prompt, correccion)
-            except Exception:
-                break
-            parrafos = extraer(corregido)
-            if es_valido(parrafos):
-                return "\n\n".join(parrafos)
-            correccion = f"El resultado sigue sin tener exactamente dos párrafos diferentes. Corrígelo y devuelve solo los dos párrafos:\n{corregido}"
-
         return (
             "Hoy escuché una canción que llevaba tiempo sin aparecer y terminó cambiándome el ánimo por completo. ¿Cuál es esa canción que últimamente se te queda dando vueltas en la cabeza?\n\n"
             "Y pensando en música, me gusta cuando una letra parece decir justo lo que uno no sabía cómo explicar. ¿Hay alguna canción cuya letra sientas especialmente cercana a ti?"
@@ -265,28 +292,6 @@ REGLAS:
         respuestas = extraer(contenido)
         if es_valido(respuestas):
             return "\n\n".join(respuestas)
-
-        correccion = f"""Las respuestas rápidas siguientes no cumplen porque son repetitivas o no son exactamente tres:
-
-{contenido}
-
-Reescríbelas desde cero como EXACTAMENTE 3 mensajes independientes, separados por una línea en blanco.
-- Usa un tema totalmente diferente en cada uno: 1) una escena graciosa o curiosa, 2) música/serie/película, 3) una elección cotidiana divertida.
-- Cada mensaje debe tener una apertura, vocabulario, ritmo y pregunta final diferentes.
-- No repitas café, desayuno ni ninguna escena entre mensajes.
-- No empieces dos mensajes con la misma pregunta o las mismas siete palabras.
-- Cada uno debe tener entre 20 y 45 palabras, sonar espontáneo y dejar abierta la conversación.
-- No uses números, títulos, etiquetas ni viñetas. Devuelve solamente los tres párrafos."""
-
-        for _ in range(1):
-            try:
-                corregido = self._llamar_ia(system_prompt, correccion)
-            except Exception:
-                break
-            respuestas = extraer(corregido)
-            if es_valido(respuestas):
-                return "\n\n".join(respuestas)
-            correccion = f"Todavía no son tres mensajes suficientemente diferentes. Rehazlos por completo siguiendo todas las reglas anteriores. Borrador inválido:\n{corregido}"
 
         return "\n\n".join((
             "Hoy vi a alguien intentar abrir una puerta empujando cuando decía ‘hale’ y me dio risa porque todos hemos pasado por algo así. ¿Qué despiste reciente te hizo reír de ti misma?",
