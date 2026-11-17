@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     # IA APIs
     GEMINI_API_KEY: Optional[str] = None
     GROQ_API_KEY: Optional[str] = None
-    AI_PROVIDER: str = "gemini"
+    AI_PROVIDER: str = "groq"
 
     # Scraper
     SCRAPER_HEADLESS: bool = True

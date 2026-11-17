@@ -183,13 +183,32 @@ INSTRUCCIONES POR CLAVE:
 
     def _llamar_proveedor_json(self, system_prompt: str, user_prompt: str, claves: List[str]) -> str:
         """Usa JSON estructurado en Gemini y una respuesta JSON normal en Groq."""
-        if self.provider != "gemini":
-            return self._llamar_proveedor(system_prompt, user_prompt)
         schema = {
             "type": "object",
             "properties": {clave: {"type": "string"} for clave in claves},
             "required": claves,
         }
+        if self.provider == "groq":
+            response = self.groq_client.chat.completions.create(
+                model="openai/gpt-oss-20b",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                temperature=0.75,
+                max_tokens=4500,
+                response_format={
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": "contenido_modulo",
+                        "strict": True,
+                        "schema": schema,
+                    },
+                },
+            )
+            return response.choices[0].message.content if response.choices else ""
+        if self.provider != "gemini":
+            return self._llamar_proveedor(system_prompt, user_prompt)
         try:
             response = self.gemini_client.models.generate_content(
                 model=self.gemini_model_name,
@@ -647,19 +666,9 @@ TEXTO:
 
     def _llamar_proveedor(self, system_prompt: str, user_prompt: str) -> str:
         if self.provider == "gemini":
-            try:
-                return self._llamar_gemini(system_prompt, user_prompt)
-            except Exception:
-                if self.groq_client:
-                    return self._llamar_groq(system_prompt, user_prompt)
-                raise
+            return self._llamar_gemini(system_prompt, user_prompt)
         elif self.provider == "groq":
-            try:
-                return self._llamar_groq(system_prompt, user_prompt)
-            except Exception:
-                if self.gemini_client:
-                    return self._llamar_gemini(system_prompt, user_prompt)
-                raise
+            return self._llamar_groq(system_prompt, user_prompt)
         return ""
 
     def _buscar_terminos_prohibidos(self, texto: str) -> List[str]:
@@ -687,10 +696,10 @@ TEXTO:
             {"role": "user", "content": user_prompt}
         ]
         response = self.groq_client.chat.completions.create(
-            model="openai/gpt-oss-120b",
+            model="openai/gpt-oss-20b",
             messages=messages,
             temperature=0.75,
-            max_tokens=6000
+            max_tokens=4000
         )
         return response.choices[0].message.content if response.choices else ""
 

@@ -17,7 +17,7 @@ services:
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "480"
       - key: AI_PROVIDER
-        value: "gemini"
+        value: "groq"
       # Las siguientes variables deben configurarse en el Dashboard de Render de forma segura:
       # - SUPABASE_URL
       # - SUPABASE_KEY
