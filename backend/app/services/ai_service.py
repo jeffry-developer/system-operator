@@ -108,6 +108,8 @@ class AIService:
                 contenido = self._asegurar_respuestas_rapidas_distintas(contenido, system_prompt)
             if tipo in {TipoMensaje.INSISTENCIA, TipoMensaje.INSISTENCIA_NEW_FEED}:
                 contenido = self._asegurar_dos_insistencias(contenido, system_prompt)
+            if tipo in {TipoMensaje.CARTA_ROMPEHIELOS, TipoMensaje.CARTA_BARRIDO}:
+                contenido = self._asegurar_cartas_350(tipo, contenido)
             if tipo in {
                 TipoMensaje.SALUDO,
                 TipoMensaje.ICEBREAKER,
@@ -174,6 +176,8 @@ INSTRUCCIONES POR CLAVE:
                         contenido = self._asegurar_respuestas_rapidas_distintas(contenido, system_prompt)
                     if tipo in {TipoMensaje.INSISTENCIA, TipoMensaje.INSISTENCIA_NEW_FEED}:
                         contenido = self._asegurar_dos_insistencias(contenido, system_prompt)
+                    if tipo in {TipoMensaje.CARTA_ROMPEHIELOS, TipoMensaje.CARTA_BARRIDO}:
+                        contenido = self._asegurar_cartas_350(tipo, contenido)
                     mensajes[tipo.value] = contenido
                 return mensajes
             except Exception as exc:
@@ -256,6 +260,32 @@ INSTRUCCIONES POR CLAVE:
             TipoMensaje.POSTS: "Me gusta cuando una canción aparece sin buscarla y cambia por completo el ambiente. ¿Cuál pondrías ahora mismo?\nPROMPT PARA CHATGPT:\nFotografía vertical 4:5 de una escena cotidiana escuchando música en un espacio vivido, iluminación nocturna cálida, encuadre espontáneo, detalles imperfectos, sin texto ni marcas de agua.\n\n---\n\nElegir algo rico parece fácil hasta que todas las opciones provocan. ¿Qué escogerías sin pensarlo?\nPROMPT PARA CHATGPT:\nFotografía vertical 4:5 de una preparación casera sencilla en una cocina real y ligeramente desordenada, luz cálida, encuadre natural, sin texto ni marcas de agua.\n\n---\n\nUna buena historia puede hacer que uno pierda la noción del tiempo. ¿Qué película o serie logró atraparte así?\nPROMPT PARA CHATGPT:\nFotografía vertical 4:5 de un rincón cotidiano preparado para ver una película, ambiente nocturno acogedor, composición espontánea y realista, sin texto ni marcas de agua.",
         }
         return respaldos.get(tipo, "Hace un rato pensé en esas pequeñas cosas que vuelven una conversación interesante. ¿Qué detalle inesperado llamó tu atención últimamente?")
+
+    def _asegurar_cartas_350(self, tipo: TipoMensaje, contenido: str) -> str:
+        """Garantiza cartas cercanas a 350 caracteres sin otra llamada de IA."""
+        cartas = [
+            " ".join(bloque.split())
+            for bloque in re.split(r"\n\s*\n+", contenido.strip())
+            if bloque.strip()
+        ]
+        cantidad_esperada = 1 if tipo == TipoMensaje.CARTA_ROMPEHIELOS else 2
+        if len(cartas) == cantidad_esperada and all(300 <= len(carta) <= 400 for carta in cartas):
+            return "\n\n".join(cartas)
+
+        if tipo == TipoMensaje.CARTA_ROMPEHIELOS:
+            return (
+                "Hace un rato pensé que las mejores conversaciones suelen empezar por una pregunta sencilla y una respuesta inesperada. "
+                "Me gusta descubrir cómo alguien mira esas pequeñas cosas que casi nunca se comentan, porque ahí aparece lo más interesante y humano. "
+                "Si pudieras conservar un solo momento agradable de los últimos días, ¿cuál elegirías?"
+            )
+        return (
+            "Hace un rato puse música mientras ordenaba unas cosas y una canción terminó cambiando por completo el ambiente. "
+            "Me gusta cuando algo tan sencillo rompe la rutina y deja una sensación distinta, como si el momento encontrara otro ritmo sin buscarlo. "
+            "¿Qué canción consigue hacer eso contigo casi de inmediato?\n\n"
+            "Elegir algo rico para comer puede convertirse en una discusión divertida cuando todas las opciones parecen buenas. "
+            "Yo termino cambiando de idea más de una vez y disfrutando incluso esa pequeña indecisión, porque también despierta buenos recuerdos. "
+            "¿Cuál es ese plato que siempre gana cuando no quieres pensarlo demasiado?"
+        )
 
     @staticmethod
     def _contiene_datos_del_perfil(contenido: str, prompt_personalidad: str) -> bool:
