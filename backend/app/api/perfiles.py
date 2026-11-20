@@ -576,20 +576,35 @@ async def generar_plan_trabajo(perfil_id: UUID, current_user: UUID = Depends(get
         
         # Formatear respuesta como documento único
         nombre_perfil = perfil["nombre_perfil"]
-        plan_completo = f"""-----------------------------(ICEBREAKERS)---------------------------------
+        plan_completo = f"""PLAN DE TRABAJO
+
+1. 4 ROMPEHIELOS
+
 {mensajes.get("icebreaker", "")}
 
---------------------------(Carta de Rompehielos)---------------------------
+2. 1 CARTA DE IB
+
 {mensajes.get("carta_rompehielos", "")}
 
------------------------------(Cartas de Barrido)------------------------------
+3. 2 CARTAS DE BARRIDO
+
 {mensajes.get("carta_barrido", "")}
 
---------------------------(Mensajes de insistencia)-------------------------
+4. 2 MENSAJES DE INSISTENCIA
+
 {mensajes.get("insistencia", "")}
 
----------------------------------(Saludo)----------------------------------
-{mensajes.get("saludo_plan_trabajo", "")}"""
+5. 1 SALUDO
+
+{mensajes.get("saludo_plan_trabajo", "")}
+
+✅ RESUMEN PLAN DE TRABAJO
+
+4 Rompehielos
+1 Carta de IB
+2 Cartas de barrido
+2 Mensajes de insistencia
+1 Saludo"""
         
         return {"perfil_id": str(perfil_id), "plan_trabajo": plan_completo, "mensajes": mensajes}
         
@@ -627,17 +642,31 @@ async def generar_new_feed(perfil_id: UUID, current_user: UUID = Depends(get_cur
         supabase_service_admin.save_mensajes(mensajes, perfil_id)
         
         # Formatear respuesta como documento único
-        feed_completo = f"""------------------------(3 Fotos y Pies de Foto)---------------------------
+        feed_completo = f"""NEW FEED
+
+1. 3 FOTOS PARA EL FEED
+
 {mensajes.get("posts", "")}
 
-------------------------(3 Respuestas Rapidas)---------------------------
+4. RESPUESTAS RÁPIDAS (3)
+
 {mensajes.get("respuestas_rapidas", "")}
 
--------------------------(1 Saludo)-------------------------------
+5. SALUDO (1)
+
 {mensajes.get("saludo_new_feed", "")}
 
-------------------------(2 Mensajes de insistencia)------------------------
-{mensajes.get("insistencia_new_feed", "")}"""
+6. INSISTENCIAS (2)
+
+{mensajes.get("insistencia_new_feed", "")}
+
+✅ RESUMEN DEL NEW FEED
+
+3 fotos
+✍️ 3 pies de foto con pregunta
+3 respuestas rápidas
+1 saludo
+2 insistencias"""
         
         return {"perfil_id": str(perfil_id), "new_feed": feed_completo, "mensajes": mensajes}
         

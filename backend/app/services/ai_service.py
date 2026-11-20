@@ -82,7 +82,7 @@ class AIService:
     def generar_mensajes(self, prompt_personalidad: str, tipos: List[TipoMensaje], ultimos_mensajes: Dict[str, str] = None) -> Dict[str, str]:
         """Genera en paralelo contenido humano, reutilizable y sin datos privados."""
         if len(tipos) > 1 and all(tipo in TIPOS_CONTENIDO_GENERAL for tipo in tipos):
-            return self._generar_lote_general(tipos, prompt_personalidad)
+            return self._generar_lote_general(tipos, prompt_personalidad, ultimos_mensajes)
 
         def generar_tipo(tipo: TipoMensaje) -> tuple[str, str]:
             es_contenido_general = tipo in TIPOS_CONTENIDO_GENERAL
@@ -95,10 +95,10 @@ class AIService:
                 "" if es_contenido_general else prompt_personalidad,
             )
             
-            # El historial de versiones antiguas puede contener datos del
-            # perfil. Nunca se incorpora al contenido general reutilizable.
-            if not es_contenido_general and ultimos_mensajes and tipo.value in ultimos_mensajes:
-                anterior = ultimos_mensajes[tipo.value][:500]  # máx 500 chars del anterior
+            # La salida anterior ya fue sanitizada y solo se incorpora para
+            # exigir variedad al renovar un bloque individual.
+            if ultimos_mensajes and tipo.value in ultimos_mensajes:
+                anterior = ultimos_mensajes[tipo.value][:1200]
                 prompt = f"IMPORTANTE: El siguiente contenido fue generado anteriormente. NO lo repitas ni uses las mismas frases o ideas:\n---\n{anterior}\n---\n\n{prompt}"
             
             contenido = self._llamar_ia(system_prompt, prompt)
@@ -136,7 +136,12 @@ class AIService:
                 mensajes[clave] = contenido
         return mensajes
 
-    def _generar_lote_general(self, tipos: List[TipoMensaje], prompt_personalidad: str) -> Dict[str, str]:
+    def _generar_lote_general(
+        self,
+        tipos: List[TipoMensaje],
+        prompt_personalidad: str,
+        ultimos_mensajes: Dict[str, str] = None,
+    ) -> Dict[str, str]:
         """Genera todos los bloques solicitados con una sola llamada al proveedor."""
         system_prompt = self._construir_system_prompt("", contenido_general=True)
         instrucciones = []
@@ -144,18 +149,34 @@ class AIService:
             instrucciones.append(f"CLAVE {tipo.value}:\n{self._construir_prompt_tipo(tipo, '')}")
         claves = [tipo.value for tipo in tipos]
         instrucciones_texto = "\n\n".join(instrucciones)
+        anteriores = []
+        for tipo in tipos:
+            anterior = (ultimos_mensajes or {}).get(tipo.value, "").strip()
+            if anterior:
+                anteriores.append(f"CLAVE {tipo.value}:\n{anterior[:1200]}")
+        historial = "\n\n".join(anteriores)
+        regla_historial = (
+            f"""\n\nCONTENIDO DE LA GENERACION ANTERIOR (SOLO PARA EVITARLO):
+{historial}
+
+La nueva respuesta debe usar escenas, temas, aperturas, preguntas y vocabulario diferentes. No copies ni reformules de cerca ninguno de esos textos."""
+            if historial else ""
+        )
         prompt = f"""Genera todos los bloques solicitados en UNA SOLA respuesta.
 
 Devuelve exclusivamente un objeto JSON válido con estas claves exactas: {json.dumps(claves, ensure_ascii=False)}.
 Cada valor debe ser un string. Representa las separaciones entre párrafos dentro del string con \\n\\n. No uses bloques de código, comentarios ni texto fuera del JSON.
 
 INSTRUCCIONES POR CLAVE:
-{instrucciones_texto}"""
+{instrucciones_texto}{regla_historial}"""
 
         ultimo_error = None
-        for intento in range(1):
+        for intento in range(3):
             try:
-                bruto = self._llamar_proveedor_json(system_prompt, prompt, claves).strip()
+                prompt_intento = prompt
+                if intento:
+                    prompt_intento += f"\n\nIntento de correccion {intento + 1}: respeta estrictamente el JSON, todas las claves y cantidades solicitadas."
+                bruto = self._llamar_proveedor_json(system_prompt, prompt_intento, claves).strip()
                 bruto = re.sub(r"^```(?:json)?\s*|\s*```$", "", bruto, flags=re.IGNORECASE)
                 inicio, fin = bruto.find("{"), bruto.rfind("}")
                 if inicio < 0 or fin < inicio:
@@ -182,8 +203,9 @@ INSTRUCCIONES POR CLAVE:
                 return mensajes
             except Exception as exc:
                 ultimo_error = exc
-        # La disponibilidad del proveedor nunca debe detener el turno completo.
-        return {tipo.value: self._fallback_general(tipo) for tipo in tipos}
+        # No ocultar un fallo del proveedor con el mismo contenido fijo: eso
+        # aparenta una generacion correcta, pero repite siempre el resultado.
+        raise ValueError(f"No fue posible generar contenido nuevo y valido: {ultimo_error}")
 
     def _llamar_proveedor_json(self, system_prompt: str, user_prompt: str, claves: List[str]) -> str:
         """Usa JSON estructurado en Gemini y una respuesta JSON normal en Groq."""
