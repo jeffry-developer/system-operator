@@ -125,6 +125,9 @@ class AIService:
                 contenido = self._quitar_numeros_y_vinetas(contenido)
             if es_contenido_general and self._contiene_datos_del_perfil(contenido, prompt_personalidad):
                 raise ValueError("El contenido incluyó información específica del perfil y fue descartado")
+            anterior = (ultimos_mensajes or {}).get(tipo.value, "").strip()
+            if anterior and self._textos_demasiado_similares(contenido, anterior):
+                raise ValueError("La nueva generación repite el contenido anterior. Intenta nuevamente.")
             return tipo.value, self._sanitizar_texto(contenido.strip())
 
         mensajes = {}
@@ -190,7 +193,7 @@ INSTRUCCIONES POR CLAVE:
                     contenido = self._sanitizar_texto(self._quitar_numeros_y_vinetas(contenido.strip()))
                     contenido = self._neutralizar_referencias_horarias(contenido)
                     if self._contiene_datos_del_perfil(contenido, prompt_personalidad):
-                        contenido = self._fallback_general(tipo)
+                        raise ValueError(f"El bloque {tipo.value} incluyo datos del perfil")
                     if tipo == TipoMensaje.ICEBREAKER:
                         contenido = self._asegurar_emoji_en_rompehielos(contenido)
                     if tipo == TipoMensaje.RESPUESTAS_RAPIDAS:
@@ -199,6 +202,9 @@ INSTRUCCIONES POR CLAVE:
                         contenido = self._asegurar_dos_insistencias(contenido, system_prompt)
                     if tipo in {TipoMensaje.CARTA_ROMPEHIELOS, TipoMensaje.CARTA_BARRIDO}:
                         contenido = self._asegurar_cartas_350(tipo, contenido)
+                    anterior = (ultimos_mensajes or {}).get(tipo.value, "").strip()
+                    if anterior and self._textos_demasiado_similares(contenido, anterior):
+                        raise ValueError(f"El bloque {tipo.value} repite la generacion anterior")
                     mensajes[tipo.value] = contenido
                 return mensajes
             except Exception as exc:
@@ -206,6 +212,20 @@ INSTRUCCIONES POR CLAVE:
         # No ocultar un fallo del proveedor con el mismo contenido fijo: eso
         # aparenta una generacion correcta, pero repite siempre el resultado.
         raise ValueError(f"No fue posible generar contenido nuevo y valido: {ultimo_error}")
+
+    @staticmethod
+    def _textos_demasiado_similares(actual: str, anterior: str) -> bool:
+        """Impide guardar como nueva una salida igual o apenas reformulada."""
+        def normalizar(texto: str) -> str:
+            texto = unicodedata.normalize("NFKD", texto.casefold())
+            texto = "".join(char for char in texto if not unicodedata.combining(char))
+            return re.sub(r"[^a-z0-9]+", " ", texto).strip()
+
+        actual_normalizado = normalizar(actual)
+        anterior_normalizado = normalizar(anterior)
+        if not actual_normalizado or not anterior_normalizado:
+            return False
+        return SequenceMatcher(None, actual_normalizado, anterior_normalizado).ratio() >= 0.82
 
     def _llamar_proveedor_json(self, system_prompt: str, user_prompt: str, claves: List[str]) -> str:
         """Usa JSON estructurado en Gemini y una respuesta JSON normal en Groq."""
@@ -292,7 +312,9 @@ INSTRUCCIONES POR CLAVE:
             if bloque.strip()
         ]
         cantidad_esperada = 1 if tipo == TipoMensaje.CARTA_ROMPEHIELOS else 2
-        if len(cartas) == cantidad_esperada and all(300 <= len(carta) <= 400 for carta in cartas):
+        # La cantidad es estructural. La longitud es orientativa y no debe
+        # convertir una carta nueva en el mismo texto fijo de respaldo.
+        if len(cartas) == cantidad_esperada and all(len(carta) >= 180 for carta in cartas):
             return "\n\n".join(cartas)
 
         if tipo == TipoMensaje.CARTA_ROMPEHIELOS:
@@ -365,27 +387,7 @@ INSTRUCCIONES POR CLAVE:
             if len(parrafos) != 2 or any(len(parrafo.split()) < 12 for parrafo in parrafos):
                 return False
             normalizados = [re.sub(r"[^a-záéíóúüñ0-9 ]", "", p.casefold()) for p in parrafos]
-            if SequenceMatcher(None, normalizados[0], normalizados[1]).ratio() >= 0.58:
-                return False
-
-            palabras_vacias = {
-                "a", "algo", "al", "con", "como", "cuando", "de", "del", "el", "ella",
-                "en", "esa", "ese", "esta", "este", "fue", "ha", "hoy", "la", "las", "le",
-                "lo", "los", "me", "mi", "muy", "o", "para", "pero", "por", "que", "qué",
-                "se", "sin", "su", "te", "tu", "tú", "un", "una", "y", "ya", "yo",
-            }
-            temas = []
-            for texto in normalizados:
-                temas.append({
-                    palabra for palabra in texto.split()
-                    if len(palabra) >= 5 and palabra not in palabras_vacias
-                })
-            # Debe existir un hilo temático común, pero las primeras frases no
-            # pueden ser la misma introducción con otra pregunta al final.
-            if not (temas[0] & temas[1]):
-                return False
-            primeras_frases = [re.split(r"[.!?]", texto, maxsplit=1)[0] for texto in normalizados]
-            return SequenceMatcher(None, primeras_frases[0], primeras_frases[1]).ratio() < 0.5
+            return SequenceMatcher(None, normalizados[0], normalizados[1]).ratio() < 0.75
 
         parrafos = extraer(contenido)
         if es_valido(parrafos):
@@ -409,11 +411,10 @@ INSTRUCCIONES POR CLAVE:
             if len(respuestas) != 3:
                 return False
             normalizadas = [re.sub(r"[^a-záéíóúüñ0-9 ]", "", r.casefold()) for r in respuestas]
-            aperturas = {" ".join(r.split()[:7]) for r in normalizadas}
-            if len(aperturas) != 3 or any("?" not in respuesta for respuesta in respuestas):
+            if any("?" not in respuesta for respuesta in respuestas):
                 return False
             return all(
-                SequenceMatcher(None, normalizadas[i], normalizadas[j]).ratio() < 0.48
+                SequenceMatcher(None, normalizadas[i], normalizadas[j]).ratio() < 0.75
                 for i in range(3)
                 for j in range(i + 1, 3)
             )
