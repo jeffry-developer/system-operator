@@ -41,6 +41,15 @@ CREATE TABLE mensajes_generados (
     fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Registro anónimo de hashes para impedir repeticiones entre usuarios.
+CREATE TABLE contenido_generado_global (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    tipo_mensaje VARCHAR(50) NOT NULL,
+    contenido_hash CHAR(64) NOT NULL,
+    fecha_creacion TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    CONSTRAINT contenido_global_tipo_hash_key UNIQUE (tipo_mensaje, contenido_hash)
+);
+
 -- ============================================================================
 -- TABLA: imagenes_descargadas (CONTROL ANTI-REPETICIÓN)
 -- ============================================================================
@@ -101,6 +110,7 @@ CREATE TABLE prompts_guardados (
 -- ============================================================================
 CREATE INDEX idx_perfiles_usuario_id ON perfiles(usuario_id);
 CREATE INDEX idx_mensajes_perfil_id ON mensajes_generados(perfil_id);
+CREATE INDEX idx_contenido_global_fecha ON contenido_generado_global(fecha_creacion);
 CREATE INDEX idx_imagenes_usuario_id ON imagenes_descargadas(usuario_id);
 CREATE INDEX idx_imagenes_hash ON imagenes_descargadas(hash_imagen);
 CREATE INDEX idx_cartas_pagadoras_perfil_id ON cartas_pagadoras(perfil_id);
@@ -115,6 +125,7 @@ CREATE INDEX idx_prompts_guardados_usuario_id ON prompts_guardados(usuario_id);
 ALTER TABLE usuarios ENABLE ROW LEVEL SECURITY;
 ALTER TABLE perfiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE mensajes_generados ENABLE ROW LEVEL SECURITY;
+ALTER TABLE contenido_generado_global ENABLE ROW LEVEL SECURITY;
 ALTER TABLE imagenes_descargadas ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cartas_pagadoras ENABLE ROW LEVEL SECURITY;
 ALTER TABLE historias_guardadas ENABLE ROW LEVEL SECURITY;

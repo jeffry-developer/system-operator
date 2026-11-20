@@ -19,6 +19,36 @@ from app.api.auth import get_current_user
 router = APIRouter()
 
 
+async def _generar_mensajes_globalmente_unicos(
+    prompt_personalidad: str,
+    tipos: List[TipoMensaje],
+    ultimos: dict,
+) -> dict:
+    """Genera y reserva contenido sin consultar ni descargar el historial global."""
+    historial_evitar = dict(ultimos or {})
+    for _ in range(3):
+        mensajes = await asyncio.wait_for(
+            asyncio.to_thread(
+                ai_service.generar_mensajes,
+                prompt_personalidad,
+                tipos,
+                historial_evitar,
+            ),
+            timeout=90.0,
+        )
+        reservado = await asyncio.to_thread(
+            supabase_service_admin.claim_mensajes_globalmente_unicos,
+            mensajes,
+        )
+        if reservado:
+            return mensajes
+        # Un choque exacto es muy poco frecuente. Si ocurre, la salida recién
+        # rechazada se añade al historial local para orientar el único reintento.
+        historial_evitar.update(mensajes)
+
+    raise ValueError("No fue posible crear contenido globalmente único después de 3 intentos")
+
+
 ENFOQUES_SALUDOS = (
     {
         "clave": "perspectiva",
@@ -405,14 +435,10 @@ async def generar_mensajes(perfil_id: UUID, request: MessageRequest, current_use
     
     # Generar mensajes con IA en un hilo separado para no bloquear el servidor
     try:
-        mensajes = await asyncio.wait_for(
-            asyncio.to_thread(
-                ai_service.generar_mensajes,
-                perfil["prompt_personalidad"],
-                request.tipos,
-                ultimos  # Pasar historial para evitar repetición
-            ),
-            timeout=180.0
+        mensajes = await _generar_mensajes_globalmente_unicos(
+            perfil["prompt_personalidad"],
+            request.tipos,
+            ultimos,
         )
         
     except asyncio.TimeoutError:
@@ -566,9 +592,8 @@ async def generar_plan_trabajo(perfil_id: UUID, current_user: UUID = Depends(get
             TipoMensaje.SALUDO_PLAN_TRABAJO,
         ]
         
-        mensajes = await asyncio.wait_for(
-            asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], tipos_plan, ultimos),
-            timeout=180.0
+        mensajes = await _generar_mensajes_globalmente_unicos(
+            perfil["prompt_personalidad"], tipos_plan, ultimos,
         )
         
         # Guardar en base de datos
@@ -633,9 +658,8 @@ async def generar_new_feed(perfil_id: UUID, current_user: UUID = Depends(get_cur
             TipoMensaje.INSISTENCIA_NEW_FEED,
         ]
         
-        mensajes = await asyncio.wait_for(
-            asyncio.to_thread(ai_service.generar_mensajes, perfil["prompt_personalidad"], tipos_feed, ultimos),
-            timeout=180.0
+        mensajes = await _generar_mensajes_globalmente_unicos(
+            perfil["prompt_personalidad"], tipos_feed, ultimos,
         )
         
         # Guardar en base de datos

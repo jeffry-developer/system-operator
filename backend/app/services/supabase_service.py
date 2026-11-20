@@ -9,6 +9,9 @@ from uuid import UUID
 from typing import List, Optional, Dict
 from datetime import datetime
 import json
+import hashlib
+import re
+import unicodedata
 
 
 PROMPT_IMAGES_MARKER = "\n\n[[SYSTEM_OPERATOR_PROMPT_IMAGES]]"
@@ -82,6 +85,49 @@ class SupabaseService:
             response = self.client.table("mensajes_generados").insert(records).execute()
             return response.data or []
         return []
+
+    @staticmethod
+    def _hash_contenido_global(contenido: str) -> str:
+        """Crea una huella estable sin conservar texto ni datos del usuario."""
+        normalizado = unicodedata.normalize("NFKD", contenido.casefold())
+        normalizado = "".join(
+            char for char in normalizado if not unicodedata.combining(char)
+        )
+        normalizado = re.sub(r"[^a-z0-9]+", " ", normalizado).strip()
+        return hashlib.sha256(normalizado.encode("utf-8")).hexdigest()
+
+    def claim_mensajes_globalmente_unicos(self, mensajes: Dict[str, str]) -> bool:
+        """Reserva bloques en una sola inserción; False indica un duplicado global."""
+        tipos_protegidos = {
+            "icebreaker", "carta_rompehielos", "carta_barrido", "insistencia",
+            "saludo_plan_trabajo", "posts", "respuestas_rapidas",
+            "saludo_new_feed", "insistencia_new_feed",
+        }
+        records = [
+            {
+                "tipo_mensaje": tipo.value if hasattr(tipo, "value") else str(tipo),
+                "contenido_hash": self._hash_contenido_global(contenido),
+            }
+            for tipo, contenido in mensajes.items()
+            if (tipo.value if hasattr(tipo, "value") else str(tipo)) in tipos_protegidos
+        ]
+        if not records:
+            return True
+
+        try:
+            # PostgREST envía el arreglo como un único INSERT. La restricción
+            # UNIQUE hace que todo el lote se revierta si un bloque ya existe.
+            self.client.table("contenido_generado_global").insert(records).execute()
+            return True
+        except Exception as exc:
+            codigo = str(getattr(exc, "code", ""))
+            detalle = str(exc).casefold()
+            if codigo == "23505" or "duplicate key" in detalle or "contenido_global_tipo_hash_key" in detalle:
+                return False
+            raise RuntimeError(
+                "No se pudo verificar la unicidad global. Aplica la migración "
+                "supabase_migration_contenido_global.sql."
+            ) from exc
 
     def get_mensajes_by_perfil(self, perfil_id: UUID) -> List[Dict]:
         response = self.client.table("mensajes_generados").select("*").eq("perfil_id", str(perfil_id)).order("fecha_creacion", desc=True).execute()
