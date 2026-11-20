@@ -124,8 +124,6 @@ class AIService:
                 TipoMensaje.INSISTENCIA_NEW_FEED,
             }:
                 contenido = self._quitar_numeros_y_vinetas(contenido)
-            if es_contenido_general and self._contiene_datos_del_perfil(contenido, prompt_personalidad):
-                raise ValueError("El contenido incluyó información específica del perfil y fue descartado")
             anterior = (ultimos_mensajes or {}).get(tipo.value, "").strip()
             umbral = 0.94 if tipo == TipoMensaje.SALUDO_PLAN_TRABAJO else 0.82
             if anterior and self._textos_demasiado_similares(contenido, anterior, umbral):
@@ -194,8 +192,6 @@ INSTRUCCIONES POR CLAVE:
                         raise ValueError(f"Falta el bloque {tipo.value}")
                     contenido = self._sanitizar_texto(self._quitar_numeros_y_vinetas(contenido.strip()))
                     contenido = self._neutralizar_referencias_horarias(contenido)
-                    if self._contiene_datos_del_perfil(contenido, prompt_personalidad):
-                        raise ValueError(f"El bloque {tipo.value} incluyo datos del perfil")
                     if tipo == TipoMensaje.ICEBREAKER:
                         contenido = self._asegurar_emoji_en_rompehielos(contenido)
                     if tipo == TipoMensaje.RESPUESTAS_RAPIDAS:
