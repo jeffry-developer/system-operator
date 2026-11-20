@@ -68,6 +68,7 @@ class AIService:
         self.gemini_client = None
         self.groq_client = None
         self.gemini_model_name = "gemini-3.8-flash"
+        self.groq_model_name = "qwen/qwen3.8-27b"
 
         if settings.GEMINI_API_KEY:
             self.gemini_client = genai.Client(api_key=settings.GEMINI_API_KEY)
@@ -126,7 +127,8 @@ class AIService:
             if es_contenido_general and self._contiene_datos_del_perfil(contenido, prompt_personalidad):
                 raise ValueError("El contenido incluyó información específica del perfil y fue descartado")
             anterior = (ultimos_mensajes or {}).get(tipo.value, "").strip()
-            if anterior and self._textos_demasiado_similares(contenido, anterior):
+            umbral = 0.94 if tipo == TipoMensaje.SALUDO_PLAN_TRABAJO else 0.82
+            if anterior and self._textos_demasiado_similares(contenido, anterior, umbral):
                 raise ValueError("La nueva generación repite el contenido anterior. Intenta nuevamente.")
             return tipo.value, self._sanitizar_texto(contenido.strip())
 
@@ -203,7 +205,8 @@ INSTRUCCIONES POR CLAVE:
                     if tipo in {TipoMensaje.CARTA_ROMPEHIELOS, TipoMensaje.CARTA_BARRIDO}:
                         contenido = self._asegurar_cartas_350(tipo, contenido)
                     anterior = (ultimos_mensajes or {}).get(tipo.value, "").strip()
-                    if anterior and self._textos_demasiado_similares(contenido, anterior):
+                    umbral = 0.94 if tipo == TipoMensaje.SALUDO_PLAN_TRABAJO else 0.82
+                    if anterior and self._textos_demasiado_similares(contenido, anterior, umbral):
                         raise ValueError(f"El bloque {tipo.value} repite la generacion anterior")
                     mensajes[tipo.value] = contenido
                 return mensajes
@@ -214,7 +217,7 @@ INSTRUCCIONES POR CLAVE:
         raise ValueError(f"No fue posible generar contenido nuevo y valido: {ultimo_error}")
 
     @staticmethod
-    def _textos_demasiado_similares(actual: str, anterior: str) -> bool:
+    def _textos_demasiado_similares(actual: str, anterior: str, umbral: float = 0.82) -> bool:
         """Impide guardar como nueva una salida igual o apenas reformulada."""
         def normalizar(texto: str) -> str:
             texto = unicodedata.normalize("NFKD", texto.casefold())
@@ -225,7 +228,7 @@ INSTRUCCIONES POR CLAVE:
         anterior_normalizado = normalizar(anterior)
         if not actual_normalizado or not anterior_normalizado:
             return False
-        return SequenceMatcher(None, actual_normalizado, anterior_normalizado).ratio() >= 0.82
+        return SequenceMatcher(None, actual_normalizado, anterior_normalizado).ratio() >= umbral
 
     def _llamar_proveedor_json(self, system_prompt: str, user_prompt: str, claves: List[str]) -> str:
         """Usa JSON estructurado en Gemini y una respuesta JSON normal en Groq."""
@@ -237,21 +240,19 @@ INSTRUCCIONES POR CLAVE:
         }
         if self.provider == "groq":
             response = self.groq_client.chat.completions.create(
-                model="openai/gpt-oss-20b",
+                model=self.groq_model_name,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
                 temperature=0.75,
-                max_tokens=4500,
-                response_format={
-                    "type": "json_schema",
-                    "json_schema": {
-                        "name": "contenido_modulo",
-                        "strict": True,
-                        "schema": schema,
-                    },
-                },
+                # Estos documentos ocupan bastante menos de 3500 tokens. Un
+                # limite de 4500 hacia que dos renovaciones consecutivas
+                # agotaran el TPM de Groq antes de producir la segunda salida.
+                max_tokens=3500,
+                # El JSON y sus claves se validan localmente debajo para poder
+                # corregir respuestas incompletas sin depender del validador
+                # estricto del proveedor.
             )
             return response.choices[0].message.content if response.choices else ""
         if self.provider != "gemini":
@@ -750,7 +751,7 @@ TEXTO:
             {"role": "user", "content": user_prompt}
         ]
         response = self.groq_client.chat.completions.create(
-            model="openai/gpt-oss-20b",
+            model=self.groq_model_name,
             messages=messages,
             temperature=0.75,
             max_tokens=4000
