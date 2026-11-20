@@ -213,6 +213,7 @@ INSTRUCCIONES POR CLAVE:
             "type": "object",
             "properties": {clave: {"type": "string"} for clave in claves},
             "required": claves,
+            "additionalProperties": False,
         }
         if self.provider == "groq":
             response = self.groq_client.chat.completions.create(
